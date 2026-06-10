@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GXO Prize Draw — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 16px 60px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media (max-width:760px){.wrap{grid-template-columns:1fr}}
+  .full{grid-column:1 / -1}
+  .add-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .add-row input[type=text]{flex:1;min-width:140px}
+  .pic-label{
+    display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;
+    color:var(--green);background:var(--panel-2);border:1px dashed var(--line);
+    border-radius:6px;padding:9px 12px;cursor:pointer;
+  }
+  .pic-label:hover{border-color:var(--green)}
+  .pic-label input{display:none}
+  .pic-label img{width:24px;height:24px;object-fit:cover;border-radius:3px}
+  ul.list{max-height:380px;overflow-y:auto}
+  /* PIN gate */
+  .gate{max-width:340px;margin:80px auto;text-align:center}
+  .gate .panel{padding:30px}
+  .gate input{text-align:center;font-size:1.3rem;letter-spacing:.3em;margin:14px 0}
+</style>
+</head>
+<body>
+
+<div class="demo-banner" id="demoBanner" style="display:none">
+  Demo mode — Firebase isn't connected yet, data is not saved. See README for setup.
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="gxo-logo">GX<span>O</span></div>
+    <div class="site-name">Prize Draw Admin</div>
+  </div>
+  <a class="btn btn-ghost" href="index.html">→ Go to the wheel</a>
+</header>
+
+<div class="gate" id="gate">
+  <div class="panel">
+    <h2>Enter admin PIN</h2>
+    <input type="password" id="pinInput" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button class="btn btn-green" id="pinBtn" style="width:100%">Unlock</button>
+    <p class="muted" id="pinMsg" style="margin-top:10px"></p>
+  </div>
+</div>
+
+<main class="wrap" id="adminUi" style="display:none">
+
+  <section class="panel">
+    <h2>Names <span class="count" id="nameCount">0</span></h2>
+    <div class="add-row">
+      <input type="text" id="nameInput" placeholder="Add a name (or paste several, comma-separated)" maxlength="300">
+      <button class="btn btn-green" id="addNameBtn">Add</button>
+    </div>
+    <ul class="list" id="nameList"></ul>
+    <p class="muted" id="nameEmpty">No names yet.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Prizes <span class="count" id="prizeCount">0</span></h2>
+    <div class="add-row">
+      <input type="text" id="prizeInput" placeholder="Add a prize…" maxlength="80">
+      <label class="pic-label"><input type="file" id="prizePic" accept="image/*"><span id="picText">📷 Picture</span></label>
+      <button class="btn btn-green" id="addPrizeBtn">Add</button>
+    </div>
+    <ul class="list" id="prizeList"></ul>
+    <p class="muted" id="prizeEmpty">No prizes yet.</p>
+    <p class="muted" style="margin-top:8px">
+      The <b>bottom prize is drawn first</b> — put your star prize at the top so it goes last.
+      Use ↑ ↓ to reorder.
+    </p>
+  </section>
+
+  <section class="panel full">
+    <h2>Winners <span class="count" id="winCount">0</span></h2>
+    <ul class="list" id="winList"></ul>
+    <p class="muted" id="winEmpty">No winners yet.</p>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="exportBtn">Download winners (CSV)</button>
+      <button class="btn btn-danger" id="resetBtn">Reset everything</button>
+    </div>
+  </section>
+
+</main>
+
+<script type="module">
+import { onState, saveState, isDemo } from "./store.js";
+import { ADMIN_PIN } from "./firebase-config.js";
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+if (isDemo()) $('demoBanner').style.display='block';
+
+// ---- simple PIN gate (deterrence only) ----
+function unlock(){
+  if ($('pinInput').value === ADMIN_PIN){
+    sessionStorage_ok = true;
+    $('gate').style.display='none';
+    $('adminUi').style.display='grid';
+  } else {
+    $('pinMsg').textContent = 'Wrong PIN.';
+  }
+}
+let sessionStorage_ok = false;
+$('pinBtn').addEventListener('click', unlock);
+$('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') unlock(); });
+
+// ---- state ----
+let state = { names:[], prizes:[], winners:[] };
+let pendingPic = null;
+
+onState(s => { state = s; render(); });
+
+function render(){
+  $('nameList').innerHTML = state.names.map((n,i)=>`
+    <li class="row">
+      <span class="num">${i+1}</span>
+      <span class="label">${esc(n)}</span>
+      <button class="icon-btn del" data-act="delname" data-i="${i}" title="Remove">✕</button>
+    </li>`).join('');
+  $('nameEmpty').style.display = state.names.length?'none':'block';
+  $('nameCount').textContent = state.names.length;
+
+  $('prizeList').innerHTML = state.prizes.map((p,i)=>`
+    <li class="row">
+      <span class="num">${i+1}</span>
+      ${p.pic?`<img class="thumb" src="${p.pic}" alt="">`:''}
+      <span class="label">${esc(p.name)} ${i===state.prizes.length-1?'<span class="tag-next">← DRAWN NEXT</span>':''}</span>
+      <button class="icon-btn" data-act="up" data-i="${i}" title="Move up" ${i===0?'disabled':''}>↑</button>
+      <button class="icon-btn" data-act="down" data-i="${i}" title="Move down" ${i===state.prizes.length-1?'disabled':''}>↓</button>
+      <button class="icon-btn del" data-act="delprize" data-i="${i}" title="Remove">✕</button>
+    </li>`).join('');
+  $('prizeEmpty').style.display = state.prizes.length?'none':'block';
+  $('prizeCount').textContent = state.prizes.length;
+
+  $('winList').innerHTML = state.winners.map(w=>`
+    <li class="row">
+      ${w.pic?`<img class="thumb" src="${w.pic}" alt="">`:''}
+      <span class="label"><b style="color:var(--green)">${esc(w.name)}</b> won ${esc(w.prize)}
+        <span class="muted">· ${w.at ? new Date(w.at).toLocaleString() : ''}</span></span>
+    </li>`).join('');
+  $('winEmpty').style.display = state.winners.length?'none':'block';
+  $('winCount').textContent = state.winners.length;
+}
+
+async function commit(){
+  try { await saveState(state); }
+  catch(e){ alert('Save failed: ' + e.message); }
+}
+
+// ---- names ----
+$('addNameBtn').addEventListener('click', addName);
+$('nameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addName(); });
+function addName(){
+  const raw = $('nameInput').value.trim();
+  if(!raw) return;
+  const add = raw.split(',').map(s=>s.trim()).filter(Boolean);
+  state.names = [...state.names, ...add];
+  $('nameInput').value='';
+  commit();
+}
+
+// ---- prizes ----
+$('prizePic').addEventListener('change', ()=>{
+  const f = $('prizePic').files[0];
+  if(!f) return;
+  resizeImage(f, 400, 0.8).then(dataUrl=>{
+    pendingPic = dataUrl;
+    $('picText').innerHTML = `<img src="${dataUrl}" alt=""> ✓`;
+  }).catch(()=> alert('Could not read that image.'));
+});
+
+$('addPrizeBtn').addEventListener('click', addPrize);
+$('prizeInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addPrize(); });
+function addPrize(){
+  const n = $('prizeInput').value.trim();
+  if(!n) return;
+  state.prizes = [...state.prizes, {name:n, pic:pendingPic}];
+  pendingPic = null;
+  $('prizeInput').value='';
+  $('prizePic').value='';
+  $('picText').textContent='📷 Picture';
+  commit();
+}
+
+// resize images client-side so they fit comfortably in Firestore (1MB doc limit)
+function resizeImage(file, maxDim, quality){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width*scale);
+      c.height = Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = rej;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// ---- list actions (event delegation) ----
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]');
+  if(!b) return;
+  const i = +b.dataset.i;
+  const act = b.dataset.act;
+  if(act==='delname'){ state.names.splice(i,1); }
+  if(act==='delprize'){ state.prizes.splice(i,1); }
+  if(act==='up' && i>0){ [state.prizes[i-1],state.prizes[i]] = [state.prizes[i],state.prizes[i-1]]; }
+  if(act==='down' && i<state.prizes.length-1){ [state.prizes[i+1],state.prizes[i]] = [state.prizes[i],state.prizes[i+1]]; }
+  commit();
+});
+
+// ---- export + reset ----
+$('exportBtn').addEventListener('click', ()=>{
+  const rows = [['Name','Prize','When'], ...state.winners.map(w=>[w.name, w.prize, w.at?new Date(w.at).toISOString():''])];
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = 'prize-draw-winners.csv';
+  a.click();
+});
+
+$('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('Clear ALL names, prizes and winners? This cannot be undone.')) return;
+  state = { names:[], prizes:[], winners:[] };
+  commit();
+});
+</script>
+</body>
+</html>

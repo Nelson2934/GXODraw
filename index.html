@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GXO Safety Milestone Prize Draw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .stage{
+    max-width:1100px;margin:0 auto;padding:26px 16px 60px;
+    display:grid;grid-template-columns:1fr 320px;gap:26px;align-items:start;
+  }
+  @media (max-width:860px){.stage{grid-template-columns:1fr}}
+  .hero-text{text-align:center;margin-bottom:18px}
+  .hero-text h1{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;
+    font-size:clamp(1.6rem,4.5vw,2.6rem);letter-spacing:.04em;text-transform:uppercase;
+  }
+  .hero-text h1 b{color:var(--green)}
+  .hero-text p{color:var(--grey);font-weight:500;margin-top:4px}
+
+  .wheel-wrap{position:relative;width:min(86vw,560px);margin:0 auto}
+  .wheel-wrap canvas{width:100%;height:auto;display:block}
+  .pointer{
+    position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+    width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;
+    border-top:34px solid var(--green);z-index:5;
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,.6));
+  }
+  .hub{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:92px;height:92px;border-radius:50%;
+    background:var(--black);border:4px solid var(--green);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.5rem;z-index:4;
+  }
+  .hub span{color:var(--green)}
+  .spin-area{text-align:center;margin-top:24px}
+  .btn-spin{
+    font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;letter-spacing:.12em;
+    padding:16px 60px;text-transform:uppercase;
+  }
+  .side .panel{margin-bottom:18px}
+  .next-prize{display:flex;align-items:center;gap:14px}
+  .next-prize img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:2px solid var(--green)}
+  .next-prize .ph{width:84px;height:84px;border-radius:8px;border:2px dashed var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:2rem;color:#4a554f}
+  .next-prize .pname{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.3rem}
+  footer{ text-align:center;color:#5b6661;font-size:.8rem;padding:14px;border-top:1px solid var(--line)}
+  footer a{color:#5b6661}
+</style>
+</head>
+<body>
+
+<div class="demo-banner" id="demoBanner" style="display:none">
+  Demo mode — Firebase isn't connected yet, data is not saved. See README for setup.
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <!-- Replace this text wordmark with your official logo if you have the file:
+         <img src="gxo-logo.png" alt="GXO" style="height:36px"> -->
+    <div class="gxo-logo">GX<span>O</span></div>
+    <div class="site-name" id="siteName" style="display:none"></div>
+  </div>
+  <div class="milestone" id="milestone">1 YEAR · ZERO LOST TIME ACCIDENTS</div>
+</header>
+
+<main class="stage">
+  <section>
+    <div class="hero-text">
+      <h1>Safety Milestone <b>Prize Draw</b></h1>
+      <p>One spin, one winner, one prize — everyone on the wheel got us here.</p>
+    </div>
+
+    <div class="wheel-wrap">
+      <div class="pointer" aria-hidden="true"></div>
+      <canvas id="wheel" width="900" height="900" role="img" aria-label="Prize draw wheel with names"></canvas>
+      <div class="hub">GX<span>O</span></div>
+    </div>
+
+    <div class="spin-area">
+      <button class="btn btn-green btn-spin" id="spinBtn" disabled>Spin</button>
+      <p class="muted" id="status" style="margin-top:10px"></p>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="panel">
+      <h2>Next prize</h2>
+      <div class="next-prize" id="nextPrize"><p class="muted">No prizes loaded yet.</p></div>
+      <p class="muted" style="margin-top:10px">Prizes are drawn from the bottom of the admin list upwards.</p>
+    </div>
+    <div class="panel">
+      <h2>Still in the draw <span class="count" id="nameCount">0</span></h2>
+      <ul class="list" id="nameList"></ul>
+      <p class="muted" id="nameEmpty">Add names on the admin page.</p>
+    </div>
+    <div class="panel">
+      <h2>Winners <span class="count" id="winCount">0</span></h2>
+      <ul class="list" id="winList"></ul>
+      <p class="muted" id="winEmpty">No winners yet.</p>
+    </div>
+  </aside>
+</main>
+
+<footer><a href="admin.html">admin</a></footer>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <p class="eyebrow">Congratulations</p>
+    <p class="winner-name" id="mName"></p>
+    <p class="wins">wins</p>
+    <img class="prize-pic" id="mPic" alt="Prize picture" style="display:none">
+    <div class="prize-pic ph" id="mPicPh" style="display:none">🎁</div>
+    <p class="prize-name" id="mPrize"></p>
+    <button class="btn btn-green" id="closeBtn" style="margin-top:22px">Next spin</button>
+  </div>
+</div>
+
+<script type="module">
+import { onState, saveState, isDemo } from "./store.js";
+import { MILESTONE_TEXT, SITE_NAME } from "./firebase-config.js";
+
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+if (MILESTONE_TEXT) $('milestone').textContent = MILESTONE_TEXT;
+if (SITE_NAME) { $('siteName').textContent = SITE_NAME; $('siteName').style.display='block'; }
+if (isDemo()) $('demoBanner').style.display='block';
+
+let state = { names:[], prizes:[], winners:[] };
+let rotation = 0;        // current wheel rotation in radians
+let spinning = false;
+
+const canvas = $('wheel');
+const ctx = canvas.getContext('2d');
+const SIZE = 900, R = SIZE/2;
+const COLORS = ['#ff6a13','#181210','#ffffff','#241c18']; // GXO orange, near-black, white, charcoal
+const TEXTCOL = ['#0b0f0e','#ffffff','#0b0f0e','#ffffff'];
+
+function drawWheel(){
+  ctx.clearRect(0,0,SIZE,SIZE);
+  const names = state.names;
+  const n = names.length;
+  ctx.save();
+  ctx.translate(R,R);
+  ctx.rotate(rotation);
+
+  if(n === 0){
+    ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
+    ctx.fillStyle = '#141a18'; ctx.fill();
+    ctx.strokeStyle = '#2a332f'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.rotate(-rotation);
+    ctx.fillStyle = '#6f7a75';
+    ctx.font = '600 38px Barlow, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Add names on the admin page', 0, 12);
+    ctx.restore();
+    return;
+  }
+
+  const seg = (Math.PI*2)/n;
+  // avoid the last segment having the same colour as the first (they sit next to each other)
+  const colorIdx = i => {
+    let c = i % COLORS.length;
+    if (i === n-1 && n > 1 && c === 0) c = 1;
+    return c;
+  };
+  for(let i=0;i<n;i++){
+    const a0 = i*seg, a1 = a0+seg;
+    const ci = colorIdx(i);
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.arc(0,0,R-8,a0,a1);
+    ctx.closePath();
+    ctx.fillStyle = COLORS[ci];
+    ctx.fill();
+    ctx.strokeStyle = '#0b0f0e';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // label
+    ctx.save();
+    ctx.rotate(a0 + seg/2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = TEXTCOL[ci];
+    const fs = Math.max(16, Math.min(34, 620/n + 10));
+    ctx.font = `700 ${fs}px "Barlow Condensed", sans-serif`;
+    let label = names[i];
+    if(label.length > 18) label = label.slice(0,17)+'…';
+    ctx.fillText(label, R-30, fs/3);
+    ctx.restore();
+  }
+  // outer ring
+  ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
+  ctx.strokeStyle = '#ff6a13'; ctx.lineWidth = 8; ctx.stroke();
+  ctx.restore();
+}
+
+function render(){
+  drawWheel();
+
+  // names list
+  $('nameList').innerHTML = state.names.map(n=>`<li class="row"><span class="label">${esc(n)}</span></li>`).join('');
+  $('nameEmpty').style.display = state.names.length ? 'none':'block';
+  $('nameCount').textContent = state.names.length;
+
+  // next prize (bottom of list)
+  const np = state.prizes[state.prizes.length-1];
+  $('nextPrize').innerHTML = np
+    ? `${np.pic ? `<img src="${np.pic}" alt="">` : `<div class="ph">🎁</div>`}<div><div class="pname">${esc(np.name)}</div><div class="muted">${state.prizes.length} prize${state.prizes.length===1?'':'s'} left</div></div>`
+    : `<p class="muted">No prizes left.</p>`;
+
+  // winners
+  $('winList').innerHTML = state.winners.map(w=>`
+    <li class="row">
+      ${w.pic ? `<img class="thumb" src="${w.pic}" alt="">` : ''}
+      <span class="label"><b style="color:var(--green)">${esc(w.name)}</b><br><span class="muted">${esc(w.prize)}</span></span>
+    </li>`).join('');
+  $('winEmpty').style.display = state.winners.length ? 'none':'block';
+  $('winCount').textContent = state.winners.length;
+
+  // spin button
+  const ready = state.names.length > 0 && state.prizes.length > 0;
+  $('spinBtn').disabled = !ready || spinning;
+  $('status').textContent = ready ? '' :
+    (state.names.length === 0 ? 'Waiting for names…' : 'No prizes left — the draw is complete! 🎉');
+}
+
+onState(s => {
+  if (spinning) { state = s; return; } // redraw after spin finishes
+  state = s;
+  render();
+});
+
+// ---------------- spin ----------------
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+$('spinBtn').addEventListener('click', () => {
+  if (spinning || !state.names.length || !state.prizes.length) return;
+  spinning = true;
+  $('spinBtn').disabled = true;
+
+  const n = state.names.length;
+  const winnerIdx = Math.floor(Math.random()*n);
+  const seg = (Math.PI*2)/n;
+
+  // pointer is at top (-90deg). We want the middle of winner segment under it.
+  const targetAngle = -Math.PI/2 - (winnerIdx*seg + seg/2);
+  const current = rotation % (Math.PI*2);
+  let delta = targetAngle - current;
+  delta = ((delta % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);  // normalise 0..2π
+  const turns = reduceMotion ? 0 : 6;
+  const total = delta + turns*Math.PI*2;
+  const duration = reduceMotion ? 400 : 6500;
+  const start = performance.now();
+  const startRot = rotation;
+
+  function frame(t){
+    const p = Math.min(1, (t-start)/duration);
+    const ease = 1 - Math.pow(1-p, 4);   // ease-out quart
+    rotation = startRot + total*ease;
+    drawWheel();
+    if (p < 1) requestAnimationFrame(frame);
+    else finish(winnerIdx);
+  }
+  requestAnimationFrame(frame);
+});
+
+async function finish(winnerIdx){
+  const name = state.names[winnerIdx];
+  const prize = state.prizes[state.prizes.length-1];
+
+  // show popup
+  $('mName').textContent = name;
+  $('mPrize').textContent = prize.name;
+  if (prize.pic){ $('mPic').src = prize.pic; $('mPic').style.display='block'; $('mPicPh').style.display='none'; }
+  else { $('mPic').style.display='none'; $('mPicPh').style.display='flex'; }
+  $('overlay').classList.add('show');
+  confetti();
+
+  // persist: remove winner + prize, log win
+  const newState = {
+    names: state.names.filter((_,i)=>i!==winnerIdx),
+    prizes: state.prizes.slice(0,-1),
+    winners: [{name, prize: prize.name, pic: prize.pic || null, at: Date.now()}, ...state.winners]
+  };
+  try { await saveState(newState); }
+  catch(e){ alert('Could not save the result — check your connection. ' + e.message); }
+}
+
+$('closeBtn').addEventListener('click', ()=>{
+  $('overlay').classList.remove('show');
+  spinning = false;
+  render();
+});
+$('overlay').addEventListener('click', e=>{
+  if (e.target === $('overlay')) { $('overlay').classList.remove('show'); spinning=false; render(); }
+});
+
+function confetti(){
+  const colors = ['#ff6a13','#ffffff','#9aa6a1','#c84f0a'];
+  for(let i=0;i<60;i++){
+    const c = document.createElement('div');
+    c.className='confetti';
+    c.style.left = Math.random()*100+'vw';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDelay = (Math.random()*0.7)+'s';
+    c.style.animationDuration = (2.2+Math.random()*1.6)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), 5000);
+  }
+}
+
+drawWheel();
+</script>
+</body>
+</html>
