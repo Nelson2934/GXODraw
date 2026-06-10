@@ -3,12 +3,24 @@
 // Firebase Console > Project settings > Your apps > Web app
 // ============================================================
 export const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDcA966urmTWfgOE3W6RDDQf8s9OV68r_8",
+  authDomain: "draw-c5a55.firebaseapp.com",
+  databaseURL: "https://draw-c5a55-default-rtdb.firebaseio.com",
+  projectId: "draw-c5a55",
+  storageBucket: "draw-c5a55.firebasestorage.app",
+  messagingSenderId: "62792871999",
+  appId: "1:62792871999:web:4b1585ed41cb74f16a888a"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 };
 
 // Simple PIN for the admin page (basic deterrence only, not real security —
