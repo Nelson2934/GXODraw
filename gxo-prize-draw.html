@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GXO Safety Milestone Prize Draw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<!-- Firebase (compat build: works when the file is opened directly OR hosted on Vercel) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --black:#0b0f0e; --panel:#141a18; --panel-2:#1c2421;
+  --white:#fff; --grey:#9aa6a1; --line:#2a332f;
+  --orange:#ff6a13; --orange-dark:#c84f0a; --danger:#ff3b5c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Barlow',system-ui,sans-serif;background:var(--black);color:var(--white);min-height:100vh}
+a{color:var(--orange)}
+
+.banner{display:none;text-align:center;font-weight:600;font-size:.88rem;padding:9px 14px}
+#demoBanner{background:#5a4a00;color:#ffe9a3}
+#errBanner{background:#5a1212;color:#ffc9c9}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.gxo-logo{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:2rem;line-height:1}
+.gxo-logo span{color:var(--orange)}
+.site-name{color:var(--grey);font-weight:600;font-size:.95rem;border-left:1px solid var(--line);padding-left:14px}
+.milestone{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.14em;font-size:1rem;color:var(--black);background:var(--orange);padding:8px 16px;border-radius:4px;text-transform:uppercase}
+
+.btn{font:inherit;font-weight:700;border:none;border-radius:6px;cursor:pointer;padding:12px 22px;transition:background .15s}
+.btn-orange{background:var(--orange);color:var(--black)}
+.btn-orange:hover:not(:disabled){background:#ff8038}
+.btn-orange:disabled{background:#3a443f;color:#7b857f;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--grey);border:1px solid var(--line)}
+.btn-ghost:hover{color:var(--white);border-color:var(--grey)}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn-danger:hover{background:var(--danger);color:var(--white)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.panel h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:1.05rem;color:var(--orange);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.count{background:var(--panel-2);color:var(--grey);font-size:.8rem;font-weight:700;border-radius:99px;padding:2px 10px}
+input[type=text],input[type=password]{background:var(--panel-2);border:1px solid var(--line);color:var(--white);border-radius:6px;padding:11px 12px;font:inherit;font-weight:500;width:100%}
+input::placeholder{color:#6f7a75}
+ul.list{list-style:none;max-height:380px;overflow-y:auto}
+.row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-weight:600}
+.row .label{flex:1;word-break:break-word}
+.row img.thumb{width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+.row .num{color:var(--grey);font-size:.8rem;width:20px;text-align:right}
+.icon-btn{background:none;border:none;color:var(--grey);cursor:pointer;font-size:1rem;padding:4px 7px;border-radius:4px}
+.icon-btn:hover:not(:disabled){color:var(--white);background:var(--panel)}
+.icon-btn:disabled{opacity:.3;cursor:default}
+.icon-btn.del:hover{color:var(--danger)}
+.muted{color:var(--grey);font-size:.85rem;font-weight:500}
+.tag-next{color:var(--orange);font-size:.75rem;font-weight:700;letter-spacing:.05em}
+
+/* ----- wheel view ----- */
+.stage{max-width:1100px;margin:0 auto;padding:26px 16px 60px;display:grid;grid-template-columns:1fr 320px;gap:26px;align-items:start}
+@media (max-width:860px){.stage{grid-template-columns:1fr}}
+.hero-text{text-align:center;margin-bottom:18px}
+.hero-text h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(1.6rem,4.5vw,2.6rem);letter-spacing:.04em;text-transform:uppercase}
+.hero-text h1 b{color:var(--orange)}
+.hero-text p{color:var(--grey);font-weight:500;margin-top:4px}
+.wheel-wrap{position:relative;width:min(86vw,560px);margin:0 auto}
+.wheel-wrap canvas{width:100%;height:auto;display:block}
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:34px solid var(--orange);z-index:5;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+.hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;background:var(--black);border:4px solid var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.5rem;z-index:4}
+.hub span{color:var(--orange)}
+.spin-area{text-align:center;margin-top:24px}
+.btn-spin{font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;letter-spacing:.12em;padding:16px 60px;text-transform:uppercase}
+.side .panel{margin-bottom:18px}
+.next-prize{display:flex;align-items:center;gap:14px}
+.next-prize img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:2px solid var(--orange)}
+.next-prize .ph{width:84px;height:84px;border-radius:8px;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#554a43}
+.next-prize .pname{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.3rem}
+
+/* ----- admin view ----- */
+.admin-wrap{max-width:1000px;margin:0 auto;padding:24px 16px 60px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:760px){.admin-wrap{grid-template-columns:1fr}}
+.full{grid-column:1 / -1}
+.add-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.add-row input[type=text]{flex:1;min-width:140px}
+.pic-label{display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;color:var(--orange);background:var(--panel-2);border:1px dashed var(--line);border-radius:6px;padding:9px 12px;cursor:pointer}
+.pic-label:hover{border-color:var(--orange)}
+.pic-label input{display:none}
+.pic-label img{width:24px;height:24px;object-fit:cover;border-radius:3px}
+.gate{max-width:340px;margin:70px auto;text-align:center;padding:0 16px}
+.gate .panel{padding:30px}
+.gate input{text-align:center;font-size:1.3rem;letter-spacing:.3em;margin:14px 0}
+
+/* ----- winner popup ----- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.overlay.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--orange);border-top:6px solid var(--orange);border-radius:14px;max-width:440px;width:100%;text-align:center;padding:36px 28px 30px;animation:pop .35s ease}
+@keyframes pop{from{transform:scale(.75);opacity:0}to{transform:scale(1);opacity:1}}
+.modal .eyebrow{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.25em;font-size:.85rem;color:var(--orange);text-transform:uppercase}
+.modal .winner-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(2rem,7vw,3rem);line-height:1.05;margin:10px 0 2px;word-break:break-word}
+.modal .wins{color:var(--grey);font-weight:600;margin-bottom:16px}
+.modal .prize-pic{width:190px;height:190px;object-fit:cover;border-radius:10px;border:3px solid var(--orange);margin:0 auto 14px;display:block;background:var(--panel-2)}
+.modal .prize-pic.ph{display:flex;align-items:center;justify-content:center;font-size:4rem;border-style:dashed;color:#554a43}
+.modal .prize-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.6rem;color:var(--orange);word-break:break-word}
+.confetti{position:fixed;top:-20px;width:9px;height:15px;border-radius:2px;z-index:60;animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.modal{animation:none}.confetti{display:none!important}}
+footer{text-align:center;color:#5b6661;font-size:.8rem;padding:14px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<div class="banner" id="errBanner"></div>
+<div class="banner" id="demoBanner">Running in local mode — data is saved in this browser only.</div>
+
+<header class="topbar">
+  <div class="brand">
+    <!-- To use your official logo: <img src="gxo-logo.png" alt="GXO" style="height:36px"> -->
+    <div class="gxo-logo">GX<span>O</span></div>
+    <div class="site-name" id="siteName" style="display:none"></div>
+  </div>
+  <div class="milestone" id="milestone">1 YEAR · ZERO LOST TIME ACCIDENTS</div>
+  <button class="btn btn-ghost" id="navBtn">Admin</button>
+</header>
+
+<!-- ================= WHEEL VIEW ================= -->
+<main class="stage" id="viewWheel">
+  <section>
+    <div class="hero-text">
+      <h1>Safety Milestone <b>Prize Draw</b></h1>
+      <p>One spin, one winner, one prize — everyone on the wheel got us here.</p>
+    </div>
+    <div class="wheel-wrap">
+      <div class="pointer" aria-hidden="true"></div>
+      <canvas id="wheel" width="900" height="900" role="img" aria-label="Prize draw wheel with names"></canvas>
+      <div class="hub">GX<span>O</span></div>
+    </div>
+    <div class="spin-area">
+      <button class="btn btn-orange btn-spin" id="spinBtn" disabled>Spin</button>
+      <p class="muted" id="status" style="margin-top:10px"></p>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="panel">
+      <h2>Next prize</h2>
+      <div class="next-prize" id="nextPrize"><p class="muted">No prizes loaded yet.</p></div>
+      <p class="muted" style="margin-top:10px">Prizes are drawn from the bottom of the admin list upwards.</p>
+    </div>
+    <div class="panel">
+      <h2>Still in the draw <span class="count" id="wNameCount">0</span></h2>
+      <ul class="list" id="wNameList"></ul>
+      <p class="muted" id="wNameEmpty">Add names in Admin.</p>
+    </div>
+    <div class="panel">
+      <h2>Winners <span class="count" id="wWinCount">0</span></h2>
+      <ul class="list" id="wWinList"></ul>
+      <p class="muted" id="wWinEmpty">No winners yet.</p>
+    </div>
+  </aside>
+</main>
+
+<!-- ================= ADMIN: PIN GATE ================= -->
+<div class="gate" id="gate" style="display:none">
+  <div class="panel">
+    <h2>Enter admin PIN</h2>
+    <input type="password" id="pinInput" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button class="btn btn-orange" id="pinBtn" style="width:100%">Unlock</button>
+    <p class="muted" id="pinMsg" style="margin-top:10px"></p>
+  </div>
+</div>
+
+<!-- ================= ADMIN VIEW ================= -->
+<main class="admin-wrap" id="viewAdmin" style="display:none">
+  <section class="panel">
+    <h2>Names <span class="count" id="aNameCount">0</span></h2>
+    <div class="add-row">
+      <input type="text" id="nameInput" placeholder="Add a name (or paste several, comma-separated)" maxlength="300">
+      <button class="btn btn-orange" id="addNameBtn">Add</button>
+    </div>
+    <ul class="list" id="aNameList"></ul>
+    <p class="muted" id="aNameEmpty">No names yet.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Prizes <span class="count" id="aPrizeCount">0</span></h2>
+    <div class="add-row">
+      <input type="text" id="prizeInput" placeholder="Add a prize…" maxlength="80">
+      <label class="pic-label"><input type="file" id="prizePic" accept="image/*"><span id="picText">📷 Picture</span></label>
+      <button class="btn btn-orange" id="addPrizeBtn">Add</button>
+    </div>
+    <ul class="list" id="aPrizeList"></ul>
+    <p class="muted" id="aPrizeEmpty">No prizes yet.</p>
+    <p class="muted" style="margin-top:8px">The <b>bottom prize is drawn first</b> — put your star prize at the top so it goes last. Use ↑ ↓ to reorder.</p>
+  </section>
+
+  <section class="panel full">
+    <h2>Winners <span class="count" id="aWinCount">0</span></h2>
+    <ul class="list" id="aWinList"></ul>
+    <p class="muted" id="aWinEmpty">No winners yet.</p>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="exportBtn">Download winners (CSV)</button>
+      <button class="btn btn-danger" id="resetBtn">Reset everything</button>
+    </div>
+  </section>
+</main>
+
+<footer>GXO Safety Milestone Prize Draw</footer>
+
+<!-- ================= WINNER POPUP ================= -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <p class="eyebrow">Congratulations</p>
+    <p class="winner-name" id="mName"></p>
+    <p class="wins">wins</p>
+    <img class="prize-pic" id="mPic" alt="Prize picture" style="display:none">
+    <div class="prize-pic ph" id="mPicPh" style="display:none">🎁</div>
+    <p class="prize-name" id="mPrize"></p>
+    <button class="btn btn-orange" id="closeBtn" style="margin-top:22px">Next spin</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SETTINGS — edit these
+   ============================================================ */
+var firebaseConfig = {
+  apiKey: "AIzaSyDcA966urmTWfgOE3W6RDDQf8s9OV68r_8",
+  authDomain: "draw-c5a55.firebaseapp.com",
+  projectId: "draw-c5a55",
+  storageBucket: "draw-c5a55.firebasestorage.app",
+  messagingSenderId: "62792871999",
+  appId: "1:62792871999:web:4b1585ed41cb74f16a888a"
+};
+var ADMIN_PIN = "1234";                                  // CHANGE THIS
+var MILESTONE_TEXT = "1 YEAR · ZERO LOST TIME ACCIDENTS";
+var SITE_NAME = "";                                      // e.g. "GXO Manchester"
+/* ============================================================ */
+
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showError(msg){ var b=$('errBanner'); b.textContent='⚠ '+msg; b.style.display='block'; }
+
+if (MILESTONE_TEXT) $('milestone').textContent = MILESTONE_TEXT;
+if (SITE_NAME){ $('siteName').textContent = SITE_NAME; $('siteName').style.display='block'; }
+
+/* ---------------- data layer (Firestore, falls back to this browser) ---------------- */
+var EMPTY = { names:[], prizes:[], winners:[] };
+var state = JSON.parse(JSON.stringify(EMPTY));
+var docRef = null;
+var localMode = false;
+var LOCAL_KEY = 'gxo-draw-local';
+
+function friendly(e){
+  var msg = String((e && (e.code || e.message)) || e);
+  if (msg.indexOf('permission-denied') !== -1)
+    return 'Firebase says permission denied — in the Firebase console go to Build → Firestore Database → Rules and allow read/write on draw/state.';
+  if (msg.indexOf('not-found') !== -1 || msg.indexOf('NOT_FOUND') !== -1)
+    return 'Firestore database not found — in the Firebase console go to Build → Firestore Database and click Create database (different from Realtime Database).';
+  return 'Firebase error: ' + msg + ' — running in local mode for now.';
+}
+
+function goLocal(reason){
+  if (localMode) return;
+  localMode = true;
+  if (reason) showError(reason);
+  $('demoBanner').style.display = 'block';
+  try { state = Object.assign(JSON.parse(JSON.stringify(EMPTY)), JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}')); }
+  catch(e){ state = JSON.parse(JSON.stringify(EMPTY)); }
+  render();
+}
+
+function initData(){
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('PASTE') === 0){ goLocal(); return; }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+    docRef = db.collection('draw').doc('state');
+    docRef.onSnapshot(function(snap){
+      if (!snap.exists){ docRef.set(EMPTY); return; }
+      if (spinning) { state = Object.assign(JSON.parse(JSON.stringify(EMPTY)), snap.data()); return; }
+      state = Object.assign(JSON.parse(JSON.stringify(EMPTY)), snap.data());
+      render();
+    }, function(err){ goLocal(friendly(err)); });
+  } catch(err){ goLocal(friendly(err)); }
+}
+
+function save(){
+  if (localMode){
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    render();
+    return Promise.resolve();
+  }
+  return docRef.set(state).catch(function(err){
+    showError(friendly(err));
+    throw err;
+  });
+}
+
+/* ---------------- view switching + PIN ---------------- */
+var unlocked = false;
+$('navBtn').addEventListener('click', function(){
+  var onWheel = $('viewWheel').style.display !== 'none';
+  if (onWheel){
+    $('viewWheel').style.display = 'none';
+    if (unlocked){ $('viewAdmin').style.display = 'grid'; }
+    else { $('gate').style.display = 'block'; $('pinInput').focus(); }
+    $('navBtn').textContent = '→ Go to the wheel';
+  } else {
+    $('viewAdmin').style.display = 'none';
+    $('gate').style.display = 'none';
+    $('viewWheel').style.display = 'grid';
+    $('navBtn').textContent = 'Admin';
+  }
+});
+function unlock(){
+  if ($('pinInput').value === ADMIN_PIN){
+    unlocked = true;
+    $('pinInput').value = '';
+    $('gate').style.display = 'none';
+    $('viewAdmin').style.display = 'grid';
+  } else {
+    $('pinMsg').textContent = 'Wrong PIN.';
+  }
+}
+$('pinBtn').addEventListener('click', unlock);
+$('pinInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') unlock(); });
+
+/* ---------------- rendering ---------------- */
+function render(){
+  drawWheel();
+
+  // wheel sidebar
+  $('wNameList').innerHTML = state.names.map(function(n){
+    return '<li class="row"><span class="label">'+esc(n)+'</span></li>';
+  }).join('');
+  $('wNameEmpty').style.display = state.names.length ? 'none' : 'block';
+  $('wNameCount').textContent = state.names.length;
+
+  var np = state.prizes[state.prizes.length-1];
+  $('nextPrize').innerHTML = np
+    ? (np.pic ? '<img src="'+np.pic+'" alt="">' : '<div class="ph">🎁</div>') +
+      '<div><div class="pname">'+esc(np.name)+'</div><div class="muted">'+state.prizes.length+' prize'+(state.prizes.length===1?'':'s')+' left</div></div>'
+    : '<p class="muted">No prizes left.</p>';
+
+  var winRows = state.winners.map(function(w){
+    return '<li class="row">'+(w.pic?'<img class="thumb" src="'+w.pic+'" alt="">':'')+
+      '<span class="label"><b style="color:var(--orange)">'+esc(w.name)+'</b> won '+esc(w.prize)+
+      (w.at ? ' <span class="muted">· '+new Date(w.at).toLocaleString()+'</span>' : '')+'</span></li>';
+  }).join('');
+  $('wWinList').innerHTML = winRows;
+  $('wWinEmpty').style.display = state.winners.length ? 'none' : 'block';
+  $('wWinCount').textContent = state.winners.length;
+
+  // admin lists
+  $('aNameList').innerHTML = state.names.map(function(n,i){
+    return '<li class="row"><span class="num">'+(i+1)+'</span><span class="label">'+esc(n)+'</span>'+
+      '<button class="icon-btn del" data-act="delname" data-i="'+i+'" title="Remove">✕</button></li>';
+  }).join('');
+  $('aNameEmpty').style.display = state.names.length ? 'none' : 'block';
+  $('aNameCount').textContent = state.names.length;
+
+  $('aPrizeList').innerHTML = state.prizes.map(function(p,i){
+    var last = i === state.prizes.length-1;
+    return '<li class="row"><span class="num">'+(i+1)+'</span>'+
+      (p.pic?'<img class="thumb" src="'+p.pic+'" alt="">':'')+
+      '<span class="label">'+esc(p.name)+(last?' <span class="tag-next">← DRAWN NEXT</span>':'')+'</span>'+
+      '<button class="icon-btn" data-act="up" data-i="'+i+'" '+(i===0?'disabled':'')+' title="Move up">↑</button>'+
+      '<button class="icon-btn" data-act="down" data-i="'+i+'" '+(last?'disabled':'')+' title="Move down">↓</button>'+
+      '<button class="icon-btn del" data-act="delprize" data-i="'+i+'" title="Remove">✕</button></li>';
+  }).join('');
+  $('aPrizeEmpty').style.display = state.prizes.length ? 'none' : 'block';
+  $('aPrizeCount').textContent = state.prizes.length;
+
+  $('aWinList').innerHTML = winRows;
+  $('aWinEmpty').style.display = state.winners.length ? 'none' : 'block';
+  $('aWinCount').textContent = state.winners.length;
+
+  // spin button
+  var ready = state.names.length > 0 && state.prizes.length > 0;
+  $('spinBtn').disabled = !ready || spinning;
+  $('status').textContent = ready ? '' :
+    (state.names.length === 0 ? 'Waiting for names…' : 'No prizes left — the draw is complete! 🎉');
+}
+
+/* ---------------- admin actions ---------------- */
+function addName(){
+  var raw = $('nameInput').value.trim();
+  if (!raw) return;
+  raw.split(',').map(function(s){return s.trim();}).filter(Boolean).forEach(function(n){ state.names.push(n); });
+  $('nameInput').value = '';
+  save();
+}
+$('addNameBtn').addEventListener('click', addName);
+$('nameInput').addEventListener('keydown', function(e){ if (e.key==='Enter') addName(); });
+
+var pendingPic = null;
+$('prizePic').addEventListener('change', function(){
+  var f = $('prizePic').files[0];
+  if (!f) return;
+  var img = new Image();
+  img.onload = function(){
+    var maxDim = 400;
+    var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    var c = document.createElement('canvas');
+    c.width = Math.round(img.width*scale);
+    c.height = Math.round(img.height*scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    pendingPic = c.toDataURL('image/jpeg', 0.8);
+    $('picText').innerHTML = '<img src="'+pendingPic+'" alt=""> ✓';
+  };
+  img.onerror = function(){ alert('Could not read that image.'); };
+  img.src = URL.createObjectURL(f);
+});
+
+function addPrize(){
+  var n = $('prizeInput').value.trim();
+  if (!n) return;
+  state.prizes.push({ name:n, pic:pendingPic });
+  pendingPic = null;
+  $('prizeInput').value = '';
+  $('prizePic').value = '';
+  $('picText').textContent = '📷 Picture';
+  save();
+}
+$('addPrizeBtn').addEventListener('click', addPrize);
+$('prizeInput').addEventListener('keydown', function(e){ if (e.key==='Enter') addPrize(); });
+
+document.addEventListener('click', function(e){
+  var b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  var i = +b.getAttribute('data-i');
+  var act = b.getAttribute('data-act');
+  if (act==='delname') state.names.splice(i,1);
+  if (act==='delprize') state.prizes.splice(i,1);
+  if (act==='up' && i>0){ var t=state.prizes[i-1]; state.prizes[i-1]=state.prizes[i]; state.prizes[i]=t; }
+  if (act==='down' && i<state.prizes.length-1){ var u=state.prizes[i+1]; state.prizes[i+1]=state.prizes[i]; state.prizes[i]=u; }
+  save();
+});
+
+$('exportBtn').addEventListener('click', function(){
+  var rows = [['Name','Prize','When']].concat(state.winners.map(function(w){
+    return [w.name, w.prize, w.at ? new Date(w.at).toISOString() : ''];
+  }));
+  var csv = rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = 'prize-draw-winners.csv';
+  a.click();
+});
+
+$('resetBtn').addEventListener('click', function(){
+  if (!confirm('Clear ALL names, prizes and winners? This cannot be undone.')) return;
+  state = JSON.parse(JSON.stringify(EMPTY));
+  save();
+});
+
+/* ---------------- the wheel ---------------- */
+var canvas = $('wheel');
+var ctx = canvas.getContext('2d');
+var SIZE = 900, R = SIZE/2;
+var COLORS  = ['#ff6a13','#181210','#ffffff','#241c18'];
+var TEXTCOL = ['#0b0f0e','#ffffff','#0b0f0e','#ffffff'];
+var rotation = 0;
+var spinning = false;
+
+function drawWheel(){
+  ctx.clearRect(0,0,SIZE,SIZE);
+  var names = state.names, n = names.length;
+  ctx.save();
+  ctx.translate(R,R);
+  ctx.rotate(rotation);
+
+  if (n === 0){
+    ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
+    ctx.fillStyle='#141a18'; ctx.fill();
+    ctx.strokeStyle='#2a332f'; ctx.lineWidth=4; ctx.stroke();
+    ctx.rotate(-rotation);
+    ctx.fillStyle='#6f7a75';
+    ctx.font='600 38px Barlow, sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Add names in Admin', 0, 12);
+    ctx.restore();
+    return;
+  }
+
+  var seg = (Math.PI*2)/n;
+  function colorIdx(i){
+    var c = i % COLORS.length;
+    if (i === n-1 && n > 1 && c === 0) c = 1; // avoid first+last segment matching
+    return c;
+  }
+  for (var i=0;i<n;i++){
+    var a0=i*seg, a1=a0+seg, ci=colorIdx(i);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R-8,a0,a1); ctx.closePath();
+    ctx.fillStyle = COLORS[ci]; ctx.fill();
+    ctx.strokeStyle='#0b0f0e'; ctx.lineWidth=3; ctx.stroke();
+
+    ctx.save();
+    ctx.rotate(a0 + seg/2);
+    ctx.textAlign='right';
+    ctx.fillStyle = TEXTCOL[ci];
+    var fs = Math.max(16, Math.min(34, 620/n + 10));
+    ctx.font = '700 '+fs+'px "Barlow Condensed", sans-serif';
+    var label = names[i];
+    if (label.length > 18) label = label.slice(0,17)+'…';
+    ctx.fillText(label, R-30, fs/3);
+    ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
+  ctx.strokeStyle='#ff6a13'; ctx.lineWidth=8; ctx.stroke();
+  ctx.restore();
+}
+
+var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+$('spinBtn').addEventListener('click', function(){
+  if (spinning || !state.names.length || !state.prizes.length) return;
+  spinning = true;
+  $('spinBtn').disabled = true;
+
+  var n = state.names.length;
+  var winnerIdx = Math.floor(Math.random()*n);
+  var seg = (Math.PI*2)/n;
+
+  var targetAngle = -Math.PI/2 - (winnerIdx*seg + seg/2);
+  var current = rotation % (Math.PI*2);
+  var delta = targetAngle - current;
+  delta = ((delta % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+  var turns = reduceMotion ? 0 : 6;
+  var total = delta + turns*Math.PI*2;
+  var duration = reduceMotion ? 400 : 6500;
+  var start = performance.now();
+  var startRot = rotation;
+
+  function frame(t){
+    var p = Math.min(1, (t-start)/duration);
+    var ease = 1 - Math.pow(1-p, 4);
+    rotation = startRot + total*ease;
+    drawWheel();
+    if (p < 1) requestAnimationFrame(frame);
+    else finish(winnerIdx);
+  }
+  requestAnimationFrame(frame);
+});
+
+function finish(winnerIdx){
+  var name = state.names[winnerIdx];
+  var prize = state.prizes[state.prizes.length-1];
+
+  $('mName').textContent = name;
+  $('mPrize').textContent = prize.name;
+  if (prize.pic){ $('mPic').src = prize.pic; $('mPic').style.display='block'; $('mPicPh').style.display='none'; }
+  else { $('mPic').style.display='none'; $('mPicPh').style.display='flex'; }
+  $('overlay').classList.add('show');
+  confetti();
+
+  state.names.splice(winnerIdx,1);
+  state.prizes.pop();
+  state.winners.unshift({ name:name, prize:prize.name, pic:prize.pic||null, at:Date.now() });
+  save().catch(function(e){ alert('Could not save the result: ' + e.message); });
+}
+
+$('closeBtn').addEventListener('click', function(){
+  $('overlay').classList.remove('show');
+  spinning = false;
+  render();
+});
+$('overlay').addEventListener('click', function(e){
+  if (e.target === $('overlay')){ $('overlay').classList.remove('show'); spinning=false; render(); }
+});
+
+function confetti(){
+  var colors = ['#ff6a13','#ffffff','#9aa6a1','#c84f0a'];
+  for (var i=0;i<60;i++){
+    var c = document.createElement('div');
+    c.className='confetti';
+    c.style.left = (Math.random()*100)+'vw';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDelay = (Math.random()*0.7)+'s';
+    c.style.animationDuration = (2.2+Math.random()*1.6)+'s';
+    document.body.appendChild(c);
+    setTimeout(function(el){ return function(){ el.remove(); }; }(c), 5000);
+  }
+}
+
+drawWheel();
+initData();
+</script>
+</body>
+</html>
