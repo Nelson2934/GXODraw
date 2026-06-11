@@ -154,6 +154,9 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
   .modal .prize-name{font-size:1.7rem}
 }
 /* winners ticker along the bottom of the wheel stage */
+.wheel-stage.has-ticker{padding-bottom:58px}
+body.presenting, body.presenting *{cursor:none !important}
+body.presenting #ctrlRow, body.presenting #navBtn{opacity:0;pointer-events:none;transition:opacity .4s}
 .ticker{position:absolute;left:0;right:0;bottom:0;background:rgba(10,10,10,.78);border-top:3px solid var(--orange);overflow:hidden;white-space:nowrap;padding:8px 0;z-index:2}
 .ticker-inner{display:inline-block;white-space:nowrap;animation:tickmove 30s linear infinite;font-weight:700;color:#fff;font-size:.95rem}
 .ticker-inner b{color:var(--orange)}
@@ -228,7 +231,7 @@ footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:v
       <button class="btn btn-orange btn-spin" id="spinBtn" disabled>Spin</button>
       <p class="muted" id="status" style="margin-top:10px"></p>
       <p id="progress" style="margin-top:6px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:1.05rem;color:#fff"></p>
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
+      <div id="ctrlRow" style="margin-top:12px;display:flex;gap:8px;justify-content:center">
         <button class="btn btn-ghost on-light" id="muteBtn" title="Sound on/off">🔊 Sound on</button>
         <button class="btn btn-ghost on-light" id="fsBtn" title="Fullscreen">⛶ Fullscreen</button>
       </div>
@@ -538,8 +541,13 @@ function render(){
     var tline = state.winners.map(function(w){ return '🏆 <b>'+esc(w.name)+'</b> — '+esc(w.prize); }).join(' \u00A0\u00A0•\u00A0\u00A0 ') + ' \u00A0\u00A0•\u00A0\u00A0 ';
     $('tickerInner').innerHTML = '<span>'+tline+'</span><span>'+tline+'</span>';
     $('ticker').style.display = 'block';
+    document.querySelector('.wheel-stage').classList.add('has-ticker');
+    // constant gentle speed (~35px/sec) no matter how long the list gets
+    var dist = $('tickerInner').scrollWidth / 2;
+    $('tickerInner').style.animationDuration = Math.max(18, Math.round(dist / 35)) + 's';
   } else {
     $('ticker').style.display = 'none';
+    document.querySelector('.wheel-stage').classList.remove('has-ticker');
   }
   var tops = state.prizes.slice(0, 4);
   $('topPrizes').innerHTML = (state.prizes.length > 5)
@@ -872,7 +880,18 @@ function fitWheel(){
 }
 window.addEventListener('resize', fitWheel);
 window.addEventListener('orientationchange', fitWheel);
-document.addEventListener('fullscreenchange', function(){ setTimeout(fitWheel, 120); });
+document.addEventListener('fullscreenchange', function(){ setTimeout(fitWheel, 120); updatePresenting(); });
+
+/* in fullscreen: hide the cursor and buttons after a few still seconds; any mouse move brings them back */
+var presentTimer = null;
+function updatePresenting(){
+  clearTimeout(presentTimer);
+  document.body.classList.remove('presenting');
+  if (document.fullscreenElement){
+    presentTimer = setTimeout(function(){ document.body.classList.add('presenting'); }, 2500);
+  }
+}
+document.addEventListener('mousemove', updatePresenting);
 window.addEventListener('load', function(){ fitWheel(); setTimeout(fitWheel, 400); });
 
 /* ----- fullscreen for the projector ----- */
