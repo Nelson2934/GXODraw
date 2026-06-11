@@ -153,6 +153,22 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
   .modal .prize-pic{width:250px;height:250px}
   .modal .prize-name{font-size:1.7rem}
 }
+/* winners ticker along the bottom of the wheel stage */
+.ticker{position:absolute;left:0;right:0;bottom:0;background:rgba(10,10,10,.78);border-top:3px solid var(--orange);overflow:hidden;white-space:nowrap;padding:8px 0;z-index:2}
+.ticker-inner{display:inline-block;white-space:nowrap;animation:tickmove 30s linear infinite;font-weight:700;color:#fff;font-size:.95rem}
+.ticker-inner b{color:var(--orange)}
+@keyframes tickmove{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* grand-finale styling for the last prize */
+.modal.grand{border-top-color:#f5b80c;box-shadow:0 0 0 5px rgba(245,184,12,.4),0 24px 70px rgba(0,0,0,.55)}
+.modal.grand .eyebrow{color:#b8860b}
+.modal.grand .prize-name{color:#b8860b}
+.modal.grand .prize-pic{border-color:#f5b80c}
+
+/* "big prizes still in play" chips */
+.chip{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;margin-top:6px;font-weight:700;font-size:.85rem}
+.chip img{width:30px;height:30px;object-fit:contain;background:#fff;border-radius:4px;border:1px solid var(--line)}
+
 /* big landscape screens (TVs/monitors): tighter spacing; the wheel size itself is
    measured and set by JavaScript so it ALWAYS fits, whatever the TV reports */
 @media (orientation:landscape) and (min-width:700px){
@@ -217,12 +233,14 @@ footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:v
         <button class="btn btn-ghost on-light" id="fsBtn" title="Fullscreen">⛶ Fullscreen</button>
       </div>
     </div>
+    <div class="ticker" id="ticker" style="display:none"><div class="ticker-inner" id="tickerInner"></div></div>
   </section>
 
   <aside class="side">
     <div class="panel">
       <h2>Next prize</h2>
       <div class="next-prize" id="nextPrize"><p class="muted">No prizes loaded yet.</p></div>
+      <div id="topPrizes"></div>
       <p class="muted" style="margin-top:10px">Prizes are drawn from the bottom of the admin list upwards.</p>
     </div>
     <div class="panel">
@@ -286,7 +304,7 @@ footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:v
 
 <div class="overlay" id="overlay">
   <div class="modal">
-    <p class="eyebrow">Congratulations</p>
+    <p class="eyebrow" id="mEyebrow">Congratulations</p>
     <p class="winner-name" id="mName"></p>
     <p class="wins">wins</p>
     <img class="prize-pic" id="mPic" alt="Prize picture" style="display:none">
@@ -514,6 +532,20 @@ function render(){
       '<div><div class="pname">'+esc(np.name)+'</div><div class="muted">'+state.prizes.length+' prize'+(state.prizes.length===1?'':'s')+' left</div>'+
       (after.length ? '<div class="muted" style="margin-top:4px">Then: '+after.join(' · ')+'</div>' : '')+'</div>'
     : '<p class="muted">No prizes left.</p>';
+
+  // winners ticker + headline-prize chips
+  if (state.winners.length){
+    var tline = state.winners.map(function(w){ return '🏆 <b>'+esc(w.name)+'</b> — '+esc(w.prize); }).join(' \u00A0\u00A0•\u00A0\u00A0 ') + ' \u00A0\u00A0•\u00A0\u00A0 ';
+    $('tickerInner').innerHTML = '<span>'+tline+'</span><span>'+tline+'</span>';
+    $('ticker').style.display = 'block';
+  } else {
+    $('ticker').style.display = 'none';
+  }
+  var tops = state.prizes.slice(0, 4);
+  $('topPrizes').innerHTML = (state.prizes.length > 5)
+    ? '<div class="muted" style="margin-top:10px">Big ones still in play:</div>' +
+      tops.map(function(p){ return '<div class="chip">'+(p.pic?'<img src="'+p.pic+'" alt="">':'🎁 ')+'<span>'+esc(p.name)+'</span></div>'; }).join('')
+    : '';
 
   var totalPrizes = state.prizes.length + state.winners.length;
   $('progress').innerHTML = totalPrizes
@@ -798,6 +830,11 @@ function beep(freq, dur, type, vol, delay){
     o.start(t0); o.stop(t0 + dur);
   }catch(e){}
 }
+function grandFanfare(){
+  var seq = [523,659,784,1047,784,1047,1319];
+  for (var i=0;i<seq.length;i++) beep(seq[i], i===seq.length-1 ? 1.2 : .28, 'triangle', .14, i*.15);
+  beep(262, 1.6, 'sawtooth', .05, .9);
+}
 function fanfare(){
   beep(523, .25, 'triangle', .12, 0);
   beep(659, .25, 'triangle', .12, .13);
@@ -823,6 +860,7 @@ function fitWheel(){
     var db = $('demoBanner'); if (db && db.style.display === 'block') used += db.offsetHeight;
     var hero = stage.querySelector('.hero-text'); if (hero) used += hero.offsetHeight;
     var spin = stage.querySelector('.spin-area'); if (spin) used += spin.offsetHeight;
+    var tk = $('ticker'); if (tk && tk.style.display !== 'none') used += tk.offsetHeight;
     used += 90; // paddings, pointer overhang, breathing room
     var availH = window.innerHeight - used;
     var availW = stage.clientWidth - 36;
@@ -905,16 +943,17 @@ function runSpin(winnerName, prizeName, mine){
   }
   spinning = true;
   $('spinBtn').disabled = true;
-  pendingWin = { name: winnerName, prizeName: prizeName, pic: findPrizePic(prizeName), mine: !!mine };
+  var isFinal = state.prizes.length === 1;   // last prize = the grand finale
+  pendingWin = { name: winnerName, prizeName: prizeName, pic: findPrizePic(prizeName), mine: !!mine, final: isFinal };
 
   var seg = (Math.PI*2)/n;
   var targetAngle = -Math.PI/2 - (winnerIdx*seg + seg/2);
   var current = rotation % (Math.PI*2);
   var delta = targetAngle - current;
   delta = ((delta % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
-  var turns = 9;
+  var turns = isFinal ? 12 : 9;
   var total = delta + turns*Math.PI*2;
-  var duration = 10000;   // full 10s spin on EVERY device, regardless of phone motion settings
+  var duration = isFinal ? 14000 : 10000;   // the grand finale spins even longer
   var start = performance.now();
   var startRot = rotation;
   var lastSeg = -1;
@@ -925,7 +964,11 @@ function runSpin(winnerName, prizeName, mine){
     var ease = 1 - Math.pow(1-p, 4);
     rotation = startRot + total*ease;
     var under = Math.floor(((((-Math.PI/2 - rotation) % (Math.PI*2)) + Math.PI*2) % (Math.PI*2)) / seg) % n;
-    if (under !== lastSeg && t - lastTick > 55){ lastSeg = under; lastTick = t; beep(850, .03, 'square', .04); }
+    if (under !== lastSeg && t - lastTick > 55){
+      lastSeg = under; lastTick = t;
+      var pitch = 850 + Math.max(0, p - 0.72) * 2200;   // ticks rise in pitch as the wheel slows
+      beep(pitch, .03, 'square', .045);
+    }
     drawWheel();
     if (p < 1) requestAnimationFrame(frame);
     else finishSpin();
@@ -948,9 +991,12 @@ function finishSpin(){
   $('mPrize').textContent = w.prizeName;
   if (w.pic){ $('mPic').src = w.pic; $('mPic').style.display='block'; $('mPicPh').style.display='none'; }
   else { $('mPic').style.display='none'; $('mPicPh').style.display='flex'; }
+  $('mEyebrow').textContent = w.final ? '🏆 Grand Prize Winner 🏆' : 'Congratulations';
+  document.querySelector('.modal').classList.toggle('grand', !!w.final);
   $('overlay').classList.add('show');
-  confetti();
-  fanfare();
+  confetti(w.final);
+  if (w.final){ setTimeout(function(){ confetti(true); }, 900); setTimeout(function(){ confetti(true); }, 1800); grandFanfare(); }
+  else { fanfare(); }
 
   if (w.mine){
     // only the device that pressed Spin saves the result
@@ -979,9 +1025,11 @@ $('overlay').addEventListener('click', function(e){
   if (e.target === $('overlay')) closePopup(true);
 });
 
-function confetti(){
-  var colors = ['#ff3a00','#141414','#ffffff','#ff7a52'];
-  for (var i=0;i<60;i++){
+function confetti(gold){
+  var colors = gold ? ['#f5b80c','#ffd75e','#ffffff','#ff3a00','#fff3c2']
+                    : ['#ff3a00','#141414','#ffffff','#ff7a52'];
+  var count = window.innerWidth > 1000 ? 160 : 60;
+  for (var i=0;i<count;i++){
     var c = document.createElement('div');
     c.className='confetti';
     c.style.left = (Math.random()*100)+'vw';
