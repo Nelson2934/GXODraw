@@ -153,19 +153,20 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
   .modal .prize-pic{width:250px;height:250px}
   .modal .prize-name{font-size:1.7rem}
 }
-/* TV / big-screen presentation layout: whole page fits the screen, no scrolling, no cut-off */
-@media (min-width:1000px) and (min-height:560px){
+/* big landscape screens (TVs/monitors): tighter spacing; the wheel size itself is
+   measured and set by JavaScript so it ALWAYS fits, whatever the TV reports */
+@media (orientation:landscape) and (min-width:700px){
   footer{display:none}
-  .stage{height:calc(100vh - 84px);padding:14px 18px;overflow:hidden;align-items:stretch}
-  .side{overflow-y:auto}
-  .wheel-stage{display:flex;flex-direction:column;justify-content:center;padding:14px 18px}
-  .hero-text{margin-bottom:10px}
-  .hero-text h1{font-size:clamp(1.4rem,2.6vh,2.4rem)}
-  .hero-text p{margin-top:2px;font-size:clamp(.8rem,1.6vh,1rem)}
-  .wheel-wrap{width:min(56vh,44vw,860px)}
-  .spin-area{margin-top:1.6vh}
-  .btn-spin{padding:1.4vh 60px}
-  #progress{margin-top:.8vh}
+  .stage{padding:10px 16px 14px}
+  .wheel-stage{padding:12px 16px 16px}
+  .hero-text{margin-bottom:8px}
+  .hero-text h1{font-size:clamp(1.2rem,2.4vh,2.2rem)}
+  .hero-text p{margin-top:2px;font-size:clamp(.75rem,1.5vh,.95rem)}
+  .spin-area{margin-top:10px}
+  .btn-spin{padding:min(1.4vh,14px) 56px}
+  .spin-area > div{margin-top:8px !important}
+  #progress{margin-top:5px}
+  .side .panel{margin-bottom:12px;padding:14px}
 }
 @media (prefers-reduced-motion:reduce){.modal{animation:none}.confetti{display:none!important}.float-dot{display:none}.btn-spin{animation:none}}
 footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:var(--ink)}
@@ -483,6 +484,7 @@ $('navBtn').addEventListener('click', function(){
     $('gate').style.display = 'none';
     $('viewWheel').style.display = 'grid';
     $('navBtn').textContent = 'Admin';
+    setTimeout(fitWheel, 50);
   }
 });
 function unlock(){
@@ -551,6 +553,8 @@ function render(){
   $('aWinList').innerHTML = winRows;
   $('aWinEmpty').style.display = state.winners.length ? 'none' : 'block';
   $('aWinCount').textContent = state.winners.length;
+
+  fitWheel();
 
   // spin button
   var ready = state.names.length > 0 && state.prizes.length > 0;
@@ -775,6 +779,34 @@ $('muteBtn').addEventListener('click', function(){
   muted = !muted;
   $('muteBtn').textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
 });
+
+/* ----- fit the wheel to whatever screen this is (TVs report odd sizes, so we MEASURE) ----- */
+function fitWheel(){
+  var wrap = document.querySelector('.wheel-wrap');
+  var stage = document.querySelector('.wheel-stage');
+  if (!wrap || !stage || $('viewWheel').style.display === 'none') return;
+
+  // landscape (TV / monitor / laptop): wheel must share the height with title + buttons
+  if (window.innerWidth > window.innerHeight){
+    var used = 0;
+    var tb = document.querySelector('.topbar'); if (tb) used += tb.offsetHeight;
+    var eb = $('errBanner'); if (eb && eb.style.display !== 'none' && eb.offsetHeight) used += eb.offsetHeight;
+    var db = $('demoBanner'); if (db && db.style.display === 'block') used += db.offsetHeight;
+    var hero = stage.querySelector('.hero-text'); if (hero) used += hero.offsetHeight;
+    var spin = stage.querySelector('.spin-area'); if (spin) used += spin.offsetHeight;
+    used += 90; // paddings, pointer overhang, breathing room
+    var availH = window.innerHeight - used;
+    var availW = stage.clientWidth - 36;
+    var size = Math.floor(Math.max(220, Math.min(availH, availW, 900)));
+    wrap.style.width = size + 'px';
+  } else {
+    wrap.style.width = ''; // portrait (phone): the normal CSS sizing works fine
+  }
+}
+window.addEventListener('resize', fitWheel);
+window.addEventListener('orientationchange', fitWheel);
+document.addEventListener('fullscreenchange', function(){ setTimeout(fitWheel, 120); });
+window.addEventListener('load', function(){ fitWheel(); setTimeout(fitWheel, 400); });
 
 /* ----- fullscreen for the projector ----- */
 $('fsBtn').addEventListener('click', function(){
