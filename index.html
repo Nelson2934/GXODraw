@@ -817,9 +817,9 @@ function runSpin(winnerName, prizeName, mine){
   var current = rotation % (Math.PI*2);
   var delta = targetAngle - current;
   delta = ((delta % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
-  var turns = reduceMotion ? 0 : 9;
+  var turns = 9;
   var total = delta + turns*Math.PI*2;
-  var duration = reduceMotion ? 400 : 10000;   // a proper, long TV spin
+  var duration = 10000;   // full 10s spin on EVERY device, regardless of phone motion settings
   var start = performance.now();
   var startRot = rotation;
   var lastSeg = -1;
@@ -900,7 +900,7 @@ function confetti(){
 
 /* gentle idle rotation while waiting between spins */
 (function idle(){
-  if (!reduceMotion && !spinning && !$('overlay').classList.contains('show') && state.names.length){
+  if (!spinning && !$('overlay').classList.contains('show') && state.names.length){
     rotation += 0.0012;
     drawWheel();
   }
