@@ -118,6 +118,9 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
 @media (prefers-reduced-motion:reduce){.modal{animation:none}.confetti{display:none!important}}
 footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:var(--ink)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-weight:700;font-size:.9rem;padding:11px 20px;border-radius:6px;border-left:5px solid var(--orange);box-shadow:0 6px 20px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .25s;z-index:70}
+#toast.show{opacity:1}
+#toast.warn{border-left-color:#e0a300}
 </style>
 </head>
 <body>
@@ -223,6 +226,8 @@ footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:v
 <footer>GXO Safety Milestone Prize Draw</footer>
 
 <!-- ================= WINNER POPUP ================= -->
+<div id="toast"></div>
+
 <div class="overlay" id="overlay">
   <div class="modal">
     <p class="eyebrow">Congratulations</p>
@@ -379,17 +384,30 @@ function initData(){
 }
 var seededOnce = false;
 
+var toastTimer = null;
+function toast(msg, warn){
+  var t = $('toast');
+  t.textContent = msg;
+  t.className = warn ? 'show warn' : 'show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.className = ''; }, 2200);
+}
+
 function save(){
   if (localMode){
     localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
     render();
+    toast('Saved in this browser only — not connected to Firebase', true);
     return Promise.resolve();
   }
-  return docRef.set(state).catch(function(err){
-    // Firestore write failed — drop to local mode and save there instead, so nothing is lost
+  return docRef.set(state).then(function(){
+    toast('✓ Saved to Firebase');
+  }).catch(function(err){
+    // write failed — drop to local mode and save there instead, so nothing is lost
     goLocal(friendly(err));
     localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
     render();
+    toast('Saved in this browser only — not connected to Firebase', true);
   });
 }
 
@@ -575,8 +593,13 @@ $('exportBtn').addEventListener('click', function(){
 });
 
 $('resetBtn').addEventListener('click', function(){
-  if (!confirm('Clear all names and winners, and restore the built-in prize list?')) return;
+  if (!confirm('Reset the draw? This clears all names and winners and restores the full built-in prize list. Photos you have added to prizes are KEPT.')) return;
+  // remember photos by prize name (from the current list AND from already-drawn winners)
+  var picByName = {};
+  state.prizes.forEach(function(p){ if (p.pic) picByName[p.name] = p.pic; });
+  state.winners.forEach(function(w){ if (w.pic && !picByName[w.prize]) picByName[w.prize] = w.pic; });
   state = defaultState();
+  state.prizes.forEach(function(p){ if (picByName[p.name]) p.pic = picByName[p.name]; });
   save();
 });
 
