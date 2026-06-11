@@ -659,10 +659,11 @@ var COLORS  = ['#ff3a00','#141414','#ffffff','#3a3a36'];
 var TEXTCOL = ['#ffffff','#ffffff','#141414','#ffffff'];
 var rotation = 0;
 var spinning = false;
+var frozenNames = null;   // wheel names locked during a spin so sync updates can't shift segments
 
 function drawWheel(){
   ctx.clearRect(0,0,SIZE,SIZE);
-  var names = state.names, n = names.length;
+  var names = frozenNames || state.names, n = names.length;
   ctx.save();
   ctx.translate(R,R);
   ctx.rotate(rotation);
@@ -768,12 +769,13 @@ var pendingWin = null;   // {name, prize, mine}
 
 $('spinBtn').addEventListener('click', function(){
   if (spinning || !state.names.length || !state.prizes.length) return;
-  var winnerIdx = Math.floor(Math.random()*state.names.length);
+  var winnerName = state.names[Math.floor(Math.random()*state.names.length)];
+  var prizeName = state.prizes[state.prizes.length-1].name;
   if (!localMode && cmdRef){
-    // broadcast the spin so EVERY device (phone + TV) animates it together
-    cmdRef.set({ type:'spin', winnerIdx:winnerIdx, by:CLIENT_ID, id:CLIENT_ID+'-'+Date.now(), at:Date.now() });
+    // broadcast the winner BY NAME so every device announces the same person
+    cmdRef.set({ type:'spin', winner:winnerName, prize:prizeName, by:CLIENT_ID, id:CLIENT_ID+'-'+Date.now(), at:Date.now() });
   } else {
-    runSpin(winnerIdx, true);
+    runSpin(winnerName, prizeName, true);
   }
 });
 
@@ -781,31 +783,35 @@ function handleCmd(cmd){
   if (!cmd || !cmd.id || cmd.id === lastCmdId) return;
   if (cmd.at && cmd.at < PAGE_LOADED_AT - 8000) { lastCmdId = cmd.id; return; } // stale, from before this page opened
   lastCmdId = cmd.id;
-  if (cmd.type === 'spin'){
-    if ($('overlay').classList.contains('show')){ $('overlay').classList.remove('show'); spinning=false; }
-    runSpin(cmd.winnerIdx, cmd.by === CLIENT_ID);
+  if (cmd.type === 'spin' && cmd.winner){
+    if ($('overlay').classList.contains('show')){ $('overlay').classList.remove('show'); spinning=false; frozenNames=null; }
+    runSpin(cmd.winner, cmd.prize, cmd.by === CLIENT_ID);
   }
   if (cmd.type === 'close'){
     $('overlay').classList.remove('show');
     spinning = false;
+    frozenNames = null;
     render();
   }
 }
 
-function runSpin(winnerIdx, mine){
-  if (spinning || !state.names.length || !state.prizes.length) return;
-  if (winnerIdx >= state.names.length) winnerIdx = state.names.length - 1;
+function runSpin(winnerName, prizeName, mine){
+  if (spinning) return;
+  // lock the wheel to the CURRENT list — mid-spin sync updates can no longer shift the segments
+  frozenNames = state.names.slice();
+  var n = frozenNames.length;
+  var winnerIdx = frozenNames.indexOf(winnerName);
+  if (n === 0 || winnerIdx === -1){
+    // this device's list doesn't have that name (very stale) — skip the animation, still announce correctly
+    frozenNames = null;
+    pendingWin = { name: winnerName, prizeName: prizeName, pic: findPrizePic(prizeName), mine: !!mine };
+    finishSpin();
+    return;
+  }
   spinning = true;
   $('spinBtn').disabled = true;
+  pendingWin = { name: winnerName, prizeName: prizeName, pic: findPrizePic(prizeName), mine: !!mine };
 
-  // capture the result NOW so a mid-spin sync update can't change it
-  pendingWin = {
-    name: state.names[winnerIdx],
-    prize: state.prizes[state.prizes.length-1],
-    mine: !!mine
-  };
-
-  var n = state.names.length;
   var seg = (Math.PI*2)/n;
   var targetAngle = -Math.PI/2 - (winnerIdx*seg + seg/2);
   var current = rotation % (Math.PI*2);
@@ -832,23 +838,33 @@ function runSpin(winnerIdx, mine){
   requestAnimationFrame(frame);
 }
 
+function findPrizePic(prizeName){
+  for (var i = state.prizes.length - 1; i >= 0; i--){
+    if (state.prizes[i].name === prizeName) return state.prizes[i].pic || null;
+  }
+  return null;
+}
+
 function finishSpin(){
   var w = pendingWin; pendingWin = null;
-  if (!w) { spinning = false; render(); return; }
+  if (!w) { spinning = false; frozenNames = null; render(); return; }
 
   $('mName').textContent = w.name;
-  $('mPrize').textContent = w.prize.name;
-  if (w.prize.pic){ $('mPic').src = w.prize.pic; $('mPic').style.display='block'; $('mPicPh').style.display='none'; }
+  $('mPrize').textContent = w.prizeName;
+  if (w.pic){ $('mPic').src = w.pic; $('mPic').style.display='block'; $('mPicPh').style.display='none'; }
   else { $('mPic').style.display='none'; $('mPicPh').style.display='flex'; }
   $('overlay').classList.add('show');
   confetti();
   fanfare();
 
   if (w.mine){
+    // only the device that pressed Spin saves the result
     var ni = state.names.indexOf(w.name);
     if (ni !== -1) state.names.splice(ni, 1);
-    if (state.prizes.length && state.prizes[state.prizes.length-1].name === w.prize.name) state.prizes.pop();
-    state.winners.unshift({ name:w.name, prize:w.prize.name, pic:w.prize.pic||null, at:Date.now() });
+    for (var i = state.prizes.length - 1; i >= 0; i--){
+      if (state.prizes[i].name === w.prizeName){ state.prizes.splice(i, 1); break; }
+    }
+    state.winners.unshift({ name:w.name, prize:w.prizeName, pic:w.pic||null, at:Date.now() });
     save();
   }
 }
@@ -856,6 +872,7 @@ function finishSpin(){
 function closePopup(broadcast){
   $('overlay').classList.remove('show');
   spinning = false;
+  frozenNames = null;
   render();
   if (broadcast && !localMode && cmdRef){
     cmdRef.set({ type:'close', by:CLIENT_ID, id:CLIENT_ID+'-'+Date.now(), at:Date.now() });
