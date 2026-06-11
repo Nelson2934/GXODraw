@@ -5,77 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GXO Safety Milestone Prize Draw</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
 <!-- Firebase (compat build: works when the file is opened directly OR hosted on Vercel) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 :root{
-  --black:#0b0f0e; --panel:#141a18; --panel-2:#1c2421;
-  --white:#fff; --grey:#9aa6a1; --line:#2a332f;
-  --orange:#ff6a13; --orange-dark:#c84f0a; --danger:#ff3b5c;
+  --orange:#ff3a00;        /* GXO red-orange (Pantone 1655) */
+  --orange-dark:#cc2e00;
+  --ink:#141414;
+  --bg:#f4f4f2;
+  --panel:#ffffff;
+  --panel-2:#fafaf8;
+  --line:#e3e1dd;
+  --grey:#6e6e68;
+  --danger:#c81e1e;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Barlow',system-ui,sans-serif;background:var(--black);color:var(--white);min-height:100vh}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
 a{color:var(--orange)}
 
 .banner{display:none;text-align:center;font-weight:600;font-size:.88rem;padding:9px 14px}
-#demoBanner{background:#5a4a00;color:#ffe9a3}
-#errBanner{background:#5a1212;color:#ffc9c9}
+#demoBanner{background:#fff3c9;color:#6e5400;border-bottom:1px solid #ecd98a}
+#errBanner{background:#ffe5e0;color:#a32500;border-bottom:1px solid #ffc4b8}
 
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;background:var(--ink);color:#fff;gap:12px;flex-wrap:wrap;border-bottom:5px solid var(--orange)}
 .brand{display:flex;align-items:center;gap:14px}
-.gxo-logo{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:2rem;line-height:1}
-.gxo-logo span{color:var(--orange)}
-.site-name{color:var(--grey);font-weight:600;font-size:.95rem;border-left:1px solid var(--line);padding-left:14px}
-.milestone{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.14em;font-size:1rem;color:var(--black);background:var(--orange);padding:8px 16px;border-radius:4px;text-transform:uppercase}
+.gxo-logo-img{height:30px;display:block;filter:brightness(0) invert(1)}
+.hub img{width:58px;filter:brightness(0) invert(1)}
+.gxo-logo{font-weight:800;font-size:2rem;line-height:1;letter-spacing:-.02em;color:#fff}
+.gxo-logo span{color:var(--orange);font-style:italic}
+.site-name{color:#b9b9b4;font-weight:600;font-size:.95rem;border-left:1px solid #3a3a36;padding-left:14px}
+.milestone{font-weight:800;letter-spacing:.1em;font-size:.95rem;color:#fff;background:var(--orange);padding:9px 18px;text-transform:uppercase;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
 
-.btn{font:inherit;font-weight:700;border:none;border-radius:6px;cursor:pointer;padding:12px 22px;transition:background .15s}
-.btn-orange{background:var(--orange);color:var(--black)}
-.btn-orange:hover:not(:disabled){background:#ff8038}
-.btn-orange:disabled{background:#3a443f;color:#7b857f;cursor:not-allowed}
-.btn-ghost{background:transparent;color:var(--grey);border:1px solid var(--line)}
-.btn-ghost:hover{color:var(--white);border-color:var(--grey)}
-.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
-.btn-danger:hover{background:var(--danger);color:var(--white)}
+.btn{font:inherit;font-weight:700;border:none;border-radius:4px;cursor:pointer;padding:12px 22px;transition:background .15s}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-orange:hover:not(:disabled){background:var(--orange-dark)}
+.btn-orange:disabled{background:#cfcfca;color:#8b8b85;cursor:not-allowed}
+.btn-ghost{background:transparent;color:#fff;border:1.5px solid #4a4a45}
+.btn-ghost:hover{border-color:#fff}
+.btn-ghost.on-light{color:var(--ink);border-color:#c9c7c2}
+.btn-ghost.on-light:hover{border-color:var(--ink)}
+.btn-danger{background:transparent;color:var(--danger);border:1.5px solid var(--danger)}
+.btn-danger:hover{background:var(--danger);color:#fff}
 button:focus-visible,input:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
-.panel h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:1.05rem;color:var(--orange);margin-bottom:14px;display:flex;align-items:center;gap:10px}
-.count{background:var(--panel-2);color:var(--grey);font-size:.8rem;font-weight:700;border-radius:99px;padding:2px 10px}
-input[type=text],input[type=password]{background:var(--panel-2);border:1px solid var(--line);color:var(--white);border-radius:6px;padding:11px 12px;font:inherit;font-weight:500;width:100%}
-input::placeholder{color:#6f7a75}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;box-shadow:0 1px 3px rgba(20,20,20,.05)}
+.panel h2{font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:.95rem;margin-bottom:14px;display:flex;align-items:center;gap:10px;padding-left:12px;border-left:4px solid var(--orange)}
+.count{background:var(--ink);color:#fff;font-size:.75rem;font-weight:700;border-radius:99px;padding:2px 10px}
+input[type=text],input[type=password]{background:#fff;border:1.5px solid #d6d4cf;color:var(--ink);border-radius:4px;padding:11px 12px;font:inherit;font-weight:500;width:100%}
+input::placeholder{color:#9a9a94}
 ul.list{list-style:none;max-height:380px;overflow-y:auto}
 .row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-weight:600}
 .row .label{flex:1;word-break:break-word}
 .row img.thumb{width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
-.row .num{color:var(--grey);font-size:.8rem;width:20px;text-align:right}
-.icon-btn{background:none;border:none;color:var(--grey);cursor:pointer;font-size:1rem;padding:4px 7px;border-radius:4px}
-.icon-btn:hover:not(:disabled){color:var(--white);background:var(--panel)}
+.row .num{color:#9a9a94;font-size:.8rem;width:22px;text-align:right}
+.icon-btn{background:none;border:none;color:#8b8b85;cursor:pointer;font-size:1rem;padding:4px 7px;border-radius:4px}
+.icon-btn:hover:not(:disabled){color:var(--ink);background:#efefec}
 .icon-btn:disabled{opacity:.3;cursor:default}
 .icon-btn.del:hover{color:var(--danger)}
+.pic-chip{background:#fff;border:1.5px solid var(--orange);color:var(--orange);font-weight:700;font-size:.78rem;border-radius:4px;padding:5px 9px;cursor:pointer;white-space:nowrap}
+.pic-chip:hover{background:var(--orange);color:#fff}
 .muted{color:var(--grey);font-size:.85rem;font-weight:500}
-.tag-next{color:var(--orange);font-size:.75rem;font-weight:700;letter-spacing:.05em}
+.tag-next{color:var(--orange);font-size:.75rem;font-weight:800;letter-spacing:.05em}
 
 /* ----- wheel view ----- */
-.stage{max-width:1100px;margin:0 auto;padding:26px 16px 60px;display:grid;grid-template-columns:1fr 320px;gap:26px;align-items:start}
+.stage{max-width:1100px;margin:0 auto;padding:30px 16px 60px;display:grid;grid-template-columns:1fr 320px;gap:26px;align-items:start}
 @media (max-width:860px){.stage{grid-template-columns:1fr}}
-.hero-text{text-align:center;margin-bottom:18px}
-.hero-text h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(1.6rem,4.5vw,2.6rem);letter-spacing:.04em;text-transform:uppercase}
+.hero-text{text-align:center;margin-bottom:20px}
+.hero-text h1{font-weight:800;font-size:clamp(1.6rem,4.5vw,2.5rem);letter-spacing:-.01em;text-transform:uppercase}
 .hero-text h1 b{color:var(--orange)}
-.hero-text p{color:var(--grey);font-weight:500;margin-top:4px}
-.wheel-wrap{position:relative;width:min(86vw,560px);margin:0 auto}
+.hero-text p{color:var(--grey);font-weight:500;margin-top:6px}
+.wheel-wrap{position:relative;width:min(86vw,560px);margin:0 auto;filter:drop-shadow(0 10px 24px rgba(20,20,20,.18))}
 .wheel-wrap canvas{width:100%;height:auto;display:block}
-.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:34px solid var(--orange);z-index:5;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
-.hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;background:var(--black);border:4px solid var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.5rem;z-index:4}
-.hub span{color:var(--orange)}
-.spin-area{text-align:center;margin-top:24px}
-.btn-spin{font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;letter-spacing:.12em;padding:16px 60px;text-transform:uppercase}
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:34px solid var(--ink);z-index:5;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+.hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;background:var(--ink);border:4px solid #fff;box-shadow:0 0 0 3px var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;color:#fff;z-index:4}
+.hub span{color:var(--orange);font-style:italic}
+.spin-area{text-align:center;margin-top:26px}
+.btn-spin{font-size:1.35rem;letter-spacing:.14em;padding:16px 64px;text-transform:uppercase;font-weight:800;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}
 .side .panel{margin-bottom:18px}
 .next-prize{display:flex;align-items:center;gap:14px}
 .next-prize img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:2px solid var(--orange)}
-.next-prize .ph{width:84px;height:84px;border-radius:8px;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#554a43}
-.next-prize .pname{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.3rem}
+.next-prize .ph{width:84px;height:84px;border-radius:8px;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#c9c7c2}
+.next-prize .pname{font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
 
 /* ----- admin view ----- */
 .admin-wrap{max-width:1000px;margin:0 auto;padding:24px 16px 60px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
@@ -83,7 +95,7 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
 .full{grid-column:1 / -1}
 .add-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .add-row input[type=text]{flex:1;min-width:140px}
-.pic-label{display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;color:var(--orange);background:var(--panel-2);border:1px dashed var(--line);border-radius:6px;padding:9px 12px;cursor:pointer}
+.pic-label{display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;color:var(--orange);background:#fff;border:1.5px dashed #d6d4cf;border-radius:4px;padding:9px 12px;cursor:pointer}
 .pic-label:hover{border-color:var(--orange)}
 .pic-label input{display:none}
 .pic-label img{width:24px;height:24px;object-fit:cover;border-radius:3px}
@@ -92,20 +104,20 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
 .gate input{text-align:center;font-size:1.3rem;letter-spacing:.3em;margin:14px 0}
 
 /* ----- winner popup ----- */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.overlay{position:fixed;inset:0;background:rgba(20,20,20,.78);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
 .overlay.show{display:flex}
-.modal{background:var(--panel);border:1px solid var(--orange);border-top:6px solid var(--orange);border-radius:14px;max-width:440px;width:100%;text-align:center;padding:36px 28px 30px;animation:pop .35s ease}
+.modal{background:#fff;border-top:8px solid var(--orange);border-radius:12px;max-width:440px;width:100%;text-align:center;padding:36px 28px 30px;animation:pop .35s ease;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 @keyframes pop{from{transform:scale(.75);opacity:0}to{transform:scale(1);opacity:1}}
-.modal .eyebrow{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.25em;font-size:.85rem;color:var(--orange);text-transform:uppercase}
-.modal .winner-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(2rem,7vw,3rem);line-height:1.05;margin:10px 0 2px;word-break:break-word}
+.modal .eyebrow{font-weight:800;letter-spacing:.28em;font-size:.8rem;color:var(--orange);text-transform:uppercase}
+.modal .winner-name{font-weight:800;font-size:clamp(1.9rem,7vw,2.8rem);line-height:1.05;margin:10px 0 2px;word-break:break-word;letter-spacing:-.02em;text-transform:uppercase}
 .modal .wins{color:var(--grey);font-weight:600;margin-bottom:16px}
-.modal .prize-pic{width:190px;height:190px;object-fit:cover;border-radius:10px;border:3px solid var(--orange);margin:0 auto 14px;display:block;background:var(--panel-2)}
-.modal .prize-pic.ph{display:flex;align-items:center;justify-content:center;font-size:4rem;border-style:dashed;color:#554a43}
-.modal .prize-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.6rem;color:var(--orange);word-break:break-word}
+.modal .prize-pic{width:190px;height:190px;object-fit:cover;border-radius:10px;border:3px solid var(--ink);margin:0 auto 14px;display:block;background:var(--panel-2)}
+.modal .prize-pic.ph{display:flex;align-items:center;justify-content:center;font-size:4rem;border-style:dashed;border-color:var(--line);color:#c9c7c2}
+.modal .prize-name{font-weight:800;font-size:1.45rem;color:var(--orange);word-break:break-word}
 .confetti{position:fixed;top:-20px;width:9px;height:15px;border-radius:2px;z-index:60;animation:fall linear forwards;pointer-events:none}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
 @media (prefers-reduced-motion:reduce){.modal{animation:none}.confetti{display:none!important}}
-footer{text-align:center;color:#5b6661;font-size:.8rem;padding:14px;border-top:1px solid var(--line)}
+footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:var(--ink)}
 </style>
 </head>
 <body>
@@ -115,8 +127,11 @@ footer{text-align:center;color:#5b6661;font-size:.8rem;padding:14px;border-top:1
 
 <header class="topbar">
   <div class="brand">
-    <!-- To use your official logo: <img src="gxo-logo.png" alt="GXO" style="height:36px"> -->
-    <div class="gxo-logo">GX<span>O</span></div>
+    <!-- Official GXO logo. To use your own asset from the GXO media centre instead,
+         change the src below to your file (e.g. src="gxo-logo.svg"). -->
+    <img class="gxo-logo-img" src="https://commons.wikimedia.org/wiki/Special:FilePath/GXO_Logistics_logo.svg" alt="GXO"
+         onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
+    <div class="gxo-logo" id="logoFallback" style="display:none">GX<span>O</span></div>
     <div class="site-name" id="siteName" style="display:none"></div>
   </div>
   <div class="milestone" id="milestone">1 YEAR · ZERO LOST TIME ACCIDENTS</div>
@@ -133,7 +148,7 @@ footer{text-align:center;color:#5b6661;font-size:.8rem;padding:14px;border-top:1
     <div class="wheel-wrap">
       <div class="pointer" aria-hidden="true"></div>
       <canvas id="wheel" width="900" height="900" role="img" aria-label="Prize draw wheel with names"></canvas>
-      <div class="hub">GX<span>O</span></div>
+      <div class="hub"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/GXO_Logistics_logo.svg" alt="GXO" onerror="this.outerHTML='<b>GX<span style=&quot;color:var(--orange)&quot;>O</span></b>';"></div>
     </div>
     <div class="spin-area">
       <button class="btn btn-orange btn-spin" id="spinBtn" disabled>Spin</button>
@@ -185,13 +200,13 @@ footer{text-align:center;color:#5b6661;font-size:.8rem;padding:14px;border-top:1
   <section class="panel">
     <h2>Prizes <span class="count" id="aPrizeCount">0</span></h2>
     <div class="add-row">
-      <input type="text" id="prizeInput" placeholder="Add a prize…" maxlength="80">
+      <input type="text" id="prizeInput" placeholder="Add a prize (or paste several, comma-separated)" maxlength="4000">
       <label class="pic-label"><input type="file" id="prizePic" accept="image/*"><span id="picText">📷 Picture</span></label>
       <button class="btn btn-orange" id="addPrizeBtn">Add</button>
     </div>
     <ul class="list" id="aPrizeList"></ul>
     <p class="muted" id="aPrizeEmpty">No prizes yet.</p>
-    <p class="muted" style="margin-top:8px">The <b>bottom prize is drawn first</b> — put your star prize at the top so it goes last. Use ↑ ↓ to reorder.</p>
+    <p class="muted" style="margin-top:8px">The <b>bottom prize is drawn first</b> — put your star prize at the top so it goes last. Use ↑ ↓ to reorder, and <b>📷 Add pic</b> to attach a photo to any prize.</p>
   </section>
 
   <section class="panel full">
@@ -225,16 +240,71 @@ footer{text-align:center;color:#5b6661;font-size:.8rem;padding:14px;border-top:1
    SETTINGS — edit these
    ============================================================ */
 var firebaseConfig = {
-  apiKey: "AIzaSyDcA966urmTWfgOE3W6RDDQf8s9OV68r_8",
-  authDomain: "draw-c5a55.firebaseapp.com",
-  projectId: "draw-c5a55",
-  storageBucket: "draw-c5a55.firebasestorage.app",
-  messagingSenderId: "62792871999",
-  appId: "1:62792871999:web:4b1585ed41cb74f16a888a"
+  apiKey: "AIzaSyBKO2bkpm_KiIsgATtHP9-9_8m9hnylDvw",
+  authDomain: "draw-78948.firebaseapp.com",
+  databaseURL: "https://draw-78948-default-rtdb.firebaseio.com",
+  projectId: "draw-78948",
+  storageBucket: "draw-78948.firebasestorage.app",
+  messagingSenderId: "723942245102",
+  appId: "1:723942245102:web:e6a6eaac8402e842bae9ff"
 };
 var ADMIN_PIN = "1234";                                  // CHANGE THIS
 var MILESTONE_TEXT = "1 YEAR · ZERO LOST TIME ACCIDENTS";
 var SITE_NAME = "";                                      // e.g. "GXO Manchester"
+
+// Built-in prize list. Top of this list = drawn LAST (the grand finale).
+// Bottom = drawn first. Loaded automatically on first run and on Reset.
+var DEFAULT_PRIZES = [
+  'SONY PlayStation 5',
+  'Xbox Series X 1TB',
+  'NINTENDO Switch 2',
+  'NINJA Woodfire Pro XL Outdoor Electric BBQ Grill & Smoker',
+  'Apple 11" iPad',
+  'Apple 11" iPad',
+  'Samsung 55" TV',
+  'DYSON Supersonic Hair Dryer',
+  'SHARK Matrix Plus 2-in-1 Robot Vacuum Cleaner',
+  'Apple Watch SE 3 GPS 40mm',
+  'SAMSUNG Galaxy Tab A11 8.7" Tablet 128GB',
+  'SAMSUNG Galaxy Tab A11 8.7" Tablet 128GB',
+  'NINJA SLUSHI Frozen Drink Maker',
+  'FITBIT Versa 4 Smart Watch',
+  'RUSSELL HOBBS Hot & Cool Bladeless Tower Fan',
+  'RUSSELL HOBBS Hot & Cool Bladeless Tower Fan',
+  'SHARK StainStriker Carpet Cleaner',
+  'Apple AirPods 4',
+  'Apple AirPods 4',
+  'DYSON Hushjet Mini Cool Handheld Fan',
+  'TEFAL Jamie Oliver Easy Fry',
+  'TEFAL Jamie Oliver Easy Fry',
+  'TEFAL Jamie Oliver Easy Fry',
+  'RING Battery 2K Video Doorbell',
+  'RING Battery 2K Video Doorbell',
+  'RUSSELL HOBBS Steam Genie 2in1 Maestro Clothes Steamer',
+  'RUSSELL HOBBS Compact Solo Microwave',
+  'BEATS Solo Buds Wireless Bluetooth Earbuds',
+  'BEATS Solo Buds Wireless Bluetooth Earbuds',
+  'AMAZON Fire TV Stick HD with Alexa Voice Remote',
+  'AMAZON Fire TV Stick HD with Alexa Voice Remote',
+  'AMAZON Fire TV Stick HD with Alexa Voice Remote',
+  'AMAZON Fire TV Stick HD with Alexa Voice Remote',
+  'AMAZON Fire TV Stick HD with Alexa Voice Remote',
+  'SALTER Blender',
+  'SALTER Blender',
+  'SALTER Blender',
+  'Hamilton Beach Slow Cooker',
+  'Hamilton Beach Slow Cooker',
+  'Hamilton Beach Slow Cooker',
+  'RUSSELL HOBBS Cordless Steam Iron',
+  'GROOV-E Wave Glow Portable Bluetooth Speaker',
+  'GROOV-E Wave Glow Portable Bluetooth Speaker',
+  'GROOV-E Wave Glow Portable Bluetooth Speaker',
+  'GROOV-E Wave Glow Portable Bluetooth Speaker'
+].map(function(n){ return { name:n, pic:null }; });
+
+function defaultState(){
+  return { names:[], prizes: JSON.parse(JSON.stringify(DEFAULT_PRIZES)), winners:[] };
+}
 /* ============================================================ */
 
 var $ = function(id){ return document.getElementById(id); };
@@ -249,14 +319,24 @@ var EMPTY = { names:[], prizes:[], winners:[] };
 var state = JSON.parse(JSON.stringify(EMPTY));
 var docRef = null;
 var localMode = false;
-var LOCAL_KEY = 'gxo-draw-local';
+var LOCAL_KEY = 'gxo-draw-local-v2';
+
+// Realtime Database drops empty arrays, so always re-shape what comes back
+function normalise(raw){
+  raw = raw || {};
+  return {
+    names:   Array.isArray(raw.names)   ? raw.names   : Object.values(raw.names || {}),
+    prizes:  (Array.isArray(raw.prizes) ? raw.prizes  : Object.values(raw.prizes || {}))
+               .map(function(p){ return { name: p.name, pic: p.pic || null }; }),
+    winners: Array.isArray(raw.winners) ? raw.winners : Object.values(raw.winners || {})
+  };
+}
+function hasData(s){ return !!(s.names.length || s.prizes.length || s.winners.length); }
 
 function friendly(e){
   var msg = String((e && (e.code || e.message)) || e);
-  if (msg.indexOf('permission-denied') !== -1)
-    return 'Firebase says permission denied — in the Firebase console go to Build → Firestore Database → Rules and allow read/write on draw/state.';
-  if (msg.indexOf('not-found') !== -1 || msg.indexOf('NOT_FOUND') !== -1)
-    return 'Firestore database not found — in the Firebase console go to Build → Firestore Database and click Create database (different from Realtime Database).';
+  if (msg.toLowerCase().indexOf('permission') !== -1)
+    return 'Firebase says permission denied — in the Firebase console go to Build → Realtime Database → Rules and check read/write are allowed (your current rules expire 11 July 2026).';
   return 'Firebase error: ' + msg + ' — running in local mode for now.';
 }
 
@@ -265,8 +345,18 @@ function goLocal(reason){
   localMode = true;
   if (reason) showError(reason);
   $('demoBanner').style.display = 'block';
-  try { state = Object.assign(JSON.parse(JSON.stringify(EMPTY)), JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}')); }
-  catch(e){ state = JSON.parse(JSON.stringify(EMPTY)); }
+  var stored;
+  try { stored = normalise(JSON.parse(localStorage.getItem(LOCAL_KEY) || 'null')); }
+  catch(e){ stored = JSON.parse(JSON.stringify(EMPTY)); }
+  if (hasData(state) && !hasData(stored)){
+    // keep what's on screen and save it locally so nothing is lost
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+  } else if (hasData(stored)){
+    state = stored;
+  } else {
+    state = defaultState();                       // first run: load built-in prizes
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+  }
   render();
 }
 
@@ -274,16 +364,20 @@ function initData(){
   if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('PASTE') === 0){ goLocal(); return; }
   try {
     firebase.initializeApp(firebaseConfig);
-    var db = firebase.firestore();
-    docRef = db.collection('draw').doc('state');
-    docRef.onSnapshot(function(snap){
-      if (!snap.exists){ docRef.set(EMPTY); return; }
-      if (spinning) { state = Object.assign(JSON.parse(JSON.stringify(EMPTY)), snap.data()); return; }
-      state = Object.assign(JSON.parse(JSON.stringify(EMPTY)), snap.data());
-      render();
+    docRef = firebase.database().ref('draw/state');
+    docRef.on('value', function(snap){
+      var s = normalise(snap.val());
+      if (!snap.exists() || !hasData(s)){
+        // first run: seed the database with the built-in prize list
+        if (!seededOnce){ seededOnce = true; docRef.set(defaultState()); }
+        return;
+      }
+      state = s;
+      if (!spinning) render();
     }, function(err){ goLocal(friendly(err)); });
   } catch(err){ goLocal(friendly(err)); }
 }
+var seededOnce = false;
 
 function save(){
   if (localMode){
@@ -292,8 +386,10 @@ function save(){
     return Promise.resolve();
   }
   return docRef.set(state).catch(function(err){
-    showError(friendly(err));
-    throw err;
+    // Firestore write failed — drop to local mode and save there instead, so nothing is lost
+    goLocal(friendly(err));
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    render();
   });
 }
 
@@ -365,6 +461,7 @@ function render(){
     return '<li class="row"><span class="num">'+(i+1)+'</span>'+
       (p.pic?'<img class="thumb" src="'+p.pic+'" alt="">':'')+
       '<span class="label">'+esc(p.name)+(last?' <span class="tag-next">← DRAWN NEXT</span>':'')+'</span>'+
+      '<button class="pic-chip" data-act="pic" data-i="'+i+'" title="'+(p.pic?'Change picture':'Add picture')+'">📷 '+(p.pic?'Change':'Add pic')+'</button>'+
       '<button class="icon-btn" data-act="up" data-i="'+i+'" '+(i===0?'disabled':'')+' title="Move up">↑</button>'+
       '<button class="icon-btn" data-act="down" data-i="'+i+'" '+(last?'disabled':'')+' title="Move down">↓</button>'+
       '<button class="icon-btn del" data-act="delprize" data-i="'+i+'" title="Remove">✕</button></li>';
@@ -395,9 +492,7 @@ $('addNameBtn').addEventListener('click', addName);
 $('nameInput').addEventListener('keydown', function(e){ if (e.key==='Enter') addName(); });
 
 var pendingPic = null;
-$('prizePic').addEventListener('change', function(){
-  var f = $('prizePic').files[0];
-  if (!f) return;
+function resizeImage(file, cb){
   var img = new Image();
   img.onload = function(){
     var maxDim = 400;
@@ -406,17 +501,46 @@ $('prizePic').addEventListener('change', function(){
     c.width = Math.round(img.width*scale);
     c.height = Math.round(img.height*scale);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    pendingPic = c.toDataURL('image/jpeg', 0.8);
-    $('picText').innerHTML = '<img src="'+pendingPic+'" alt=""> ✓';
+    cb(c.toDataURL('image/jpeg', 0.8));
   };
   img.onerror = function(){ alert('Could not read that image.'); };
-  img.src = URL.createObjectURL(f);
+  img.src = URL.createObjectURL(file);
+}
+$('prizePic').addEventListener('change', function(){
+  var f = $('prizePic').files[0];
+  if (!f) return;
+  resizeImage(f, function(dataUrl){
+    pendingPic = dataUrl;
+    $('picText').innerHTML = '<img src="'+pendingPic+'" alt=""> ✓';
+  });
+});
+
+// per-row picture button: attach/change a photo on an existing prize
+var rowPicIndex = null;
+var rowPicInput = document.createElement('input');
+rowPicInput.type = 'file';
+rowPicInput.accept = 'image/*';
+rowPicInput.style.display = 'none';
+document.body.appendChild(rowPicInput);
+rowPicInput.addEventListener('change', function(){
+  var f = rowPicInput.files[0];
+  if (!f || rowPicIndex === null) return;
+  resizeImage(f, function(dataUrl){
+    if (state.prizes[rowPicIndex]) state.prizes[rowPicIndex].pic = dataUrl;
+    rowPicIndex = null;
+    rowPicInput.value = '';
+    save();
+  });
 });
 
 function addPrize(){
-  var n = $('prizeInput').value.trim();
-  if (!n) return;
-  state.prizes.push({ name:n, pic:pendingPic });
+  var raw = $('prizeInput').value.trim();
+  if (!raw) return;
+  var items = raw.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  items.forEach(function(n, idx){
+    // attached picture goes on the first item only
+    state.prizes.push({ name:n, pic: idx===0 ? pendingPic : null });
+  });
   pendingPic = null;
   $('prizeInput').value = '';
   $('prizePic').value = '';
@@ -431,6 +555,7 @@ document.addEventListener('click', function(e){
   if (!b || b.disabled) return;
   var i = +b.getAttribute('data-i');
   var act = b.getAttribute('data-act');
+  if (act==='pic'){ rowPicIndex = i; rowPicInput.click(); return; }
   if (act==='delname') state.names.splice(i,1);
   if (act==='delprize') state.prizes.splice(i,1);
   if (act==='up' && i>0){ var t=state.prizes[i-1]; state.prizes[i-1]=state.prizes[i]; state.prizes[i]=t; }
@@ -450,8 +575,8 @@ $('exportBtn').addEventListener('click', function(){
 });
 
 $('resetBtn').addEventListener('click', function(){
-  if (!confirm('Clear ALL names, prizes and winners? This cannot be undone.')) return;
-  state = JSON.parse(JSON.stringify(EMPTY));
+  if (!confirm('Clear all names and winners, and restore the built-in prize list?')) return;
+  state = defaultState();
   save();
 });
 
@@ -459,8 +584,8 @@ $('resetBtn').addEventListener('click', function(){
 var canvas = $('wheel');
 var ctx = canvas.getContext('2d');
 var SIZE = 900, R = SIZE/2;
-var COLORS  = ['#ff6a13','#181210','#ffffff','#241c18'];
-var TEXTCOL = ['#0b0f0e','#ffffff','#0b0f0e','#ffffff'];
+var COLORS  = ['#ff3a00','#141414','#ffffff','#3a3a36'];
+var TEXTCOL = ['#ffffff','#ffffff','#141414','#ffffff'];
 var rotation = 0;
 var spinning = false;
 
@@ -473,11 +598,11 @@ function drawWheel(){
 
   if (n === 0){
     ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
-    ctx.fillStyle='#141a18'; ctx.fill();
-    ctx.strokeStyle='#2a332f'; ctx.lineWidth=4; ctx.stroke();
+    ctx.fillStyle='#ffffff'; ctx.fill();
+    ctx.strokeStyle='#e3e1dd'; ctx.lineWidth=4; ctx.stroke();
     ctx.rotate(-rotation);
-    ctx.fillStyle='#6f7a75';
-    ctx.font='600 38px Barlow, sans-serif';
+    ctx.fillStyle='#9a9a94';
+    ctx.font='600 38px Archivo, sans-serif';
     ctx.textAlign='center';
     ctx.fillText('Add names in Admin', 0, 12);
     ctx.restore();
@@ -494,21 +619,21 @@ function drawWheel(){
     var a0=i*seg, a1=a0+seg, ci=colorIdx(i);
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R-8,a0,a1); ctx.closePath();
     ctx.fillStyle = COLORS[ci]; ctx.fill();
-    ctx.strokeStyle='#0b0f0e'; ctx.lineWidth=3; ctx.stroke();
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.stroke();
 
     ctx.save();
     ctx.rotate(a0 + seg/2);
     ctx.textAlign='right';
     ctx.fillStyle = TEXTCOL[ci];
     var fs = Math.max(16, Math.min(34, 620/n + 10));
-    ctx.font = '700 '+fs+'px "Barlow Condensed", sans-serif';
+    ctx.font = '700 '+fs+'px Archivo, sans-serif';
     var label = names[i];
     if (label.length > 18) label = label.slice(0,17)+'…';
     ctx.fillText(label, R-30, fs/3);
     ctx.restore();
   }
   ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
-  ctx.strokeStyle='#ff6a13'; ctx.lineWidth=8; ctx.stroke();
+  ctx.strokeStyle='#141414'; ctx.lineWidth=10; ctx.stroke();
   ctx.restore();
 }
 
@@ -571,7 +696,7 @@ $('overlay').addEventListener('click', function(e){
 });
 
 function confetti(){
-  var colors = ['#ff6a13','#ffffff','#9aa6a1','#c84f0a'];
+  var colors = ['#ff3a00','#141414','#ffffff','#ff7a52'];
   for (var i=0;i<60;i++){
     var c = document.createElement('div');
     c.className='confetti';
