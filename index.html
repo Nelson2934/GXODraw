@@ -87,7 +87,7 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
 .wheel-stage .muted{color:#cfcfca}
 
 /* drifting embers for movement */
-.float-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--orange);opacity:.5;filter:blur(1px);animation:drift 11s linear infinite;z-index:1}
+.float-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--orange);opacity:.45;animation:drift 11s linear infinite;z-index:1}
 .float-dot.d1{left:8%;animation-delay:0s}
 .float-dot.d2{left:22%;animation-delay:3.5s;width:7px;height:7px}
 .float-dot.d3{left:46%;animation-delay:7s;width:6px;height:6px;background:#fff;opacity:.35}
@@ -102,7 +102,8 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
 .hero-text p{color:var(--grey);font-weight:500;margin-top:6px}
 
 /* wheel scales to ANY screen: capped by width AND height so it always fits */
-.wheel-wrap{position:relative;width:min(88vw,58vh,760px);margin:0 auto;filter:drop-shadow(0 12px 30px rgba(0,0,0,.55))}
+.wheel-wrap{position:relative;width:min(88vw,58vh,760px);margin:0 auto}
+.wheel-wrap::before{content:"";position:absolute;inset:2%;border-radius:50%;box-shadow:0 14px 40px rgba(0,0,0,.6);z-index:0}
 .wheel-wrap canvas{width:100%;height:auto;display:block}
 .pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:34px solid var(--orange);z-index:5;filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))}
 .hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;background:var(--ink);border:4px solid #fff;box-shadow:0 0 0 3px var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;color:#fff;z-index:4}
@@ -151,6 +152,20 @@ ul.list{list-style:none;max-height:380px;overflow-y:auto}
   .modal .winner-name{font-size:3.4rem}
   .modal .prize-pic{width:250px;height:250px}
   .modal .prize-name{font-size:1.7rem}
+}
+/* TV / big-screen presentation layout: whole page fits the screen, no scrolling, no cut-off */
+@media (min-width:1000px) and (min-height:560px){
+  footer{display:none}
+  .stage{height:calc(100vh - 84px);padding:14px 18px;overflow:hidden;align-items:stretch}
+  .side{overflow-y:auto}
+  .wheel-stage{display:flex;flex-direction:column;justify-content:center;padding:14px 18px}
+  .hero-text{margin-bottom:10px}
+  .hero-text h1{font-size:clamp(1.4rem,2.6vh,2.4rem)}
+  .hero-text p{margin-top:2px;font-size:clamp(.8rem,1.6vh,1rem)}
+  .wheel-wrap{width:min(56vh,44vw,860px)}
+  .spin-area{margin-top:1.6vh}
+  .btn-spin{padding:1.4vh 60px}
+  #progress{margin-top:.8vh}
 }
 @media (prefers-reduced-motion:reduce){.modal{animation:none}.confetti{display:none!important}.float-dot{display:none}.btn-spin{animation:none}}
 footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:var(--ink)}
@@ -661,26 +676,16 @@ var rotation = 0;
 var spinning = false;
 var frozenNames = null;   // wheel names locked during a spin so sync updates can't shift segments
 
-function drawWheel(){
-  ctx.clearRect(0,0,SIZE,SIZE);
-  var names = frozenNames || state.names, n = names.length;
-  ctx.save();
-  ctx.translate(R,R);
-  ctx.rotate(rotation);
+var wheelCache = document.createElement('canvas');
+wheelCache.width = SIZE; wheelCache.height = SIZE;
+var wctx = wheelCache.getContext('2d');
+var wheelCacheKey = null;
 
-  if (n === 0){
-    ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
-    ctx.fillStyle='#ffffff'; ctx.fill();
-    ctx.strokeStyle='#e3e1dd'; ctx.lineWidth=4; ctx.stroke();
-    ctx.rotate(-rotation);
-    ctx.fillStyle='#9a9a94';
-    ctx.font='600 38px Archivo, sans-serif';
-    ctx.textAlign='center';
-    ctx.fillText('Add names in Admin', 0, 12);
-    ctx.restore();
-    return;
-  }
-
+function buildWheelCache(names){
+  var n = names.length;
+  wctx.clearRect(0,0,SIZE,SIZE);
+  wctx.save();
+  wctx.translate(R,R);
   var seg = (Math.PI*2)/n;
   function colorIdx(i){
     var c = i % COLORS.length;
@@ -689,25 +694,54 @@ function drawWheel(){
   }
   for (var i=0;i<n;i++){
     var a0=i*seg, a1=a0+seg, ci=colorIdx(i);
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R-8,a0,a1); ctx.closePath();
-    ctx.fillStyle = COLORS[ci]; ctx.fill();
-    ctx.strokeStyle='#ffffff'; ctx.lineWidth = n>80 ? 1 : 3; ctx.stroke();
+    wctx.beginPath(); wctx.moveTo(0,0); wctx.arc(0,0,R-8,a0,a1); wctx.closePath();
+    wctx.fillStyle = COLORS[ci]; wctx.fill();
+    wctx.strokeStyle='#ffffff'; wctx.lineWidth = n>80 ? 1 : 3; wctx.stroke();
 
     if (n <= 60){
-      ctx.save();
-      ctx.rotate(a0 + seg/2);
-      ctx.textAlign='right';
-      ctx.fillStyle = TEXTCOL[ci];
+      wctx.save();
+      wctx.rotate(a0 + seg/2);
+      wctx.textAlign='right';
+      wctx.fillStyle = TEXTCOL[ci];
       var fs = Math.max(16, Math.min(34, 620/n + 10));
-      ctx.font = '700 '+fs+'px Archivo, sans-serif';
+      wctx.font = '700 '+fs+'px Archivo, sans-serif';
       var label = names[i];
       if (label.length > 18) label = label.slice(0,17)+'…';
-      ctx.fillText(label, R-30, fs/3);
-      ctx.restore();
+      wctx.fillText(label, R-30, fs/3);
+      wctx.restore();
     }
   }
-  ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
-  ctx.strokeStyle='#ffffff'; ctx.lineWidth=10; ctx.stroke();
+  wctx.beginPath(); wctx.arc(0,0,R-8,0,Math.PI*2);
+  wctx.strokeStyle='#ffffff'; wctx.lineWidth=10; wctx.stroke();
+  wctx.restore();
+}
+
+function drawWheel(){
+  ctx.clearRect(0,0,SIZE,SIZE);
+  var names = frozenNames || state.names, n = names.length;
+
+  if (n === 0){
+    ctx.save();
+    ctx.translate(R,R);
+    ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2);
+    ctx.fillStyle='#ffffff'; ctx.fill();
+    ctx.strokeStyle='#e3e1dd'; ctx.lineWidth=4; ctx.stroke();
+    ctx.fillStyle='#9a9a94';
+    ctx.font='600 38px Archivo, sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Add names in Admin', 0, 12);
+    ctx.restore();
+    return;
+  }
+
+  // re-paint the segments only when the name list actually changes
+  var key = n + '\u0001' + names.join('\u0001');
+  if (key !== wheelCacheKey){ buildWheelCache(names); wheelCacheKey = key; }
+
+  ctx.save();
+  ctx.translate(R,R);
+  ctx.rotate(rotation);
+  ctx.drawImage(wheelCache, -R, -R);
   ctx.restore();
 }
 
@@ -899,13 +933,15 @@ function confetti(){
 }
 
 /* gentle idle rotation while waiting between spins */
-(function idle(){
-  if (!spinning && !$('overlay').classList.contains('show') && state.names.length){
-    rotation += 0.0012;
+var lastIdle = 0;
+(function idle(t){
+  if (!spinning && !$('overlay').classList.contains('show') && state.names.length && (t - lastIdle) > 33){
+    lastIdle = t;
+    rotation += 0.0024;
     drawWheel();
   }
   requestAnimationFrame(idle);
-})();
+})(0);
 
 /* keyboard / presenter-clicker control on the wheel page:
    Space, Enter or PageDown = close the winner popup, or spin */
