@@ -253,7 +253,7 @@ footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:v
       <h2>Next prize</h2>
       <div class="next-prize" id="nextPrize"><p class="muted">No prizes loaded yet.</p></div>
       <div id="topPrizes"></div>
-      <p class="muted" style="margin-top:10px">Prizes are drawn from the bottom of the admin list upwards.</p>
+      <p class="muted" style="margin-top:10px">Prizes are drawn from the top of the admin list downwards.</p>
     </div>
     <div class="panel">
       <h2>Winners <span class="count" id="wWinCount">0</span></h2>
@@ -294,7 +294,7 @@ footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:v
     </div>
     <ul class="list" id="aPrizeList"></ul>
     <p class="muted" id="aPrizeEmpty">No prizes yet.</p>
-    <p class="muted" style="margin-top:8px">The <b>bottom prize is drawn first</b> — put your star prize at the top so it goes last. Use ↑ ↓ to reorder, and <b>📷 Add pic</b> to attach a photo to any prize.</p>
+    <p class="muted" style="margin-top:8px">The <b>top prize is drawn first</b> — put your star prize at the top so it goes first. Use ↑ ↓ to reorder, and <b>📷 Add pic</b> to attach a photo to any prize.</p>
   </section>
 
   <section class="panel full">
@@ -343,8 +343,8 @@ var ADMIN_PIN = "1234";                                  // CHANGE THIS
 var MILESTONE_TEXT = "1 YEAR · ZERO LOST TIME ACCIDENTS";
 var SITE_NAME = "";                                      // e.g. "GXO Manchester"
 
-// Built-in prize list. Top of this list = drawn LAST (the grand finale).
-// Bottom = drawn first. Loaded automatically on first run and on Reset.
+// Built-in prize list. Top of this list = drawn FIRST (star prize goes early).
+// Bottom = drawn last. Loaded automatically on first run and on Reset.
 var DEFAULT_PRIZES = [
   'SONY PlayStation 5',
   'Xbox Series X 1TB',
@@ -549,8 +549,8 @@ function render(){
   // wheel header count
   $('peopleCount').textContent = state.names.length ? state.names.length + ' people in the draw' : '';
 
-  var np = state.prizes[state.prizes.length-1];
-  var after = state.prizes.slice(-3, -1).reverse().map(function(p){ return esc(p.name); });
+  var np = state.prizes[0];
+  var after = state.prizes.slice(1, 3).map(function(p){ return esc(p.name); });
   $('nextPrize').innerHTML = np
     ? (np.pic ? '<img src="'+np.pic+'" alt="">' : '<div class="ph">🎁</div>') +
       '<div><div class="pname">'+esc(np.name)+'</div><div class="muted">'+state.prizes.length+' prize'+(state.prizes.length===1?'':'s')+' left</div>'+
@@ -570,9 +570,9 @@ function render(){
     $('ticker').style.display = 'none';
     document.querySelector('.wheel-stage').classList.remove('has-ticker');
   }
-  var tops = state.prizes.slice(0, 4);
+  var tops = state.prizes.slice(-4);
   $('topPrizes').innerHTML = (state.prizes.length > 5)
-    ? '<div class="muted" style="margin-top:10px">Big ones still in play:</div>' +
+    ? '<div class="muted" style="margin-top:10px">Still to come later:</div>' +
       tops.map(function(p){ return '<div class="chip">'+(p.pic?'<img src="'+p.pic+'" alt="">':'🎁 ')+'<span>'+esc(p.name)+'</span></div>'; }).join('')
     : '';
 
@@ -599,13 +599,14 @@ function render(){
   $('aNameCount').textContent = state.names.length;
 
   $('aPrizeList').innerHTML = state.prizes.map(function(p,i){
-    var last = i === state.prizes.length-1;
+    var isLast = i === state.prizes.length-1;
+    var isNext = i === 0;
     return '<li class="row"><span class="num">'+(i+1)+'</span>'+
       (p.pic?'<img class="thumb" src="'+p.pic+'" alt="">':'')+
-      '<span class="label">'+esc(p.name)+(last?' <span class="tag-next">← DRAWN NEXT</span>':'')+'</span>'+
+      '<span class="label">'+esc(p.name)+(isNext?' <span class="tag-next">← DRAWN NEXT</span>':'')+'</span>'+
       '<button class="pic-chip" data-act="pic" data-i="'+i+'" title="'+(p.pic?'Change picture':'Add picture')+'">📷 '+(p.pic?'Change':'Add pic')+'</button>'+
       '<button class="icon-btn" data-act="up" data-i="'+i+'" '+(i===0?'disabled':'')+' title="Move up">↑</button>'+
-      '<button class="icon-btn" data-act="down" data-i="'+i+'" '+(last?'disabled':'')+' title="Move down">↓</button>'+
+      '<button class="icon-btn" data-act="down" data-i="'+i+'" '+(isLast?'disabled':'')+' title="Move down">↓</button>'+
       '<button class="icon-btn del" data-act="delprize" data-i="'+i+'" title="Remove">✕</button></li>';
   }).join('');
   $('aPrizeEmpty').style.display = state.prizes.length ? 'none' : 'block';
@@ -931,7 +932,7 @@ $('undoBtn').addEventListener('click', function(){
   if (!confirm('Undo the last draw?\n\nThis puts ' + w.name + ' back on the wheel and returns "' + w.prize + '" as the next prize.')) return;
   state.winners.shift();
   state.names.push(w.name);
-  state.prizes.push({ name: w.prize, pic: w.pic || null });
+  state.prizes.unshift({ name: w.prize, pic: w.pic || null });
   save();
 });
 
@@ -943,7 +944,7 @@ var pendingWin = null;   // {name, prize, mine}
 $('spinBtn').addEventListener('click', function(){
   if (spinning || !state.names.length || !state.prizes.length) return;
   var winnerName = state.names[Math.floor(Math.random()*state.names.length)];
-  var prizeName = state.prizes[state.prizes.length-1].name;
+  var prizeName = state.prizes[0].name;
   if (!localMode && cmdRef){
     // broadcast the winner BY NAME so every device announces the same person
     cmdRef.set({ type:'spin', winner:winnerName, prize:prizeName, by:CLIENT_ID, id:CLIENT_ID+'-'+Date.now(), at:Date.now() });
@@ -1017,7 +1018,7 @@ function runSpin(winnerName, prizeName, mine){
 }
 
 function findPrizePic(prizeName){
-  for (var i = state.prizes.length - 1; i >= 0; i--){
+  for (var i = 0; i < state.prizes.length; i++){
     if (state.prizes[i].name === prizeName) return state.prizes[i].pic || null;
   }
   return null;
@@ -1042,7 +1043,7 @@ function finishSpin(){
     // only the device that pressed Spin saves the result
     var ni = state.names.indexOf(w.name);
     if (ni !== -1) state.names.splice(ni, 1);
-    for (var i = state.prizes.length - 1; i >= 0; i--){
+    for (var i = 0; i < state.prizes.length; i++){
       if (state.prizes[i].name === w.prizeName){ state.prizes.splice(i, 1); break; }
     }
     state.winners.unshift({ name:w.name, prize:w.prizeName, pic:w.pic||null, at:Date.now() });
