@@ -620,9 +620,10 @@ function render(){
 
   // spin button
   var ready = state.names.length > 0 && state.prizes.length > 0;
-  $('spinBtn').disabled = !ready || spinning;
-  $('status').textContent = ready ? '' :
-    (state.names.length === 0 ? 'Waiting for names…' : 'No prizes left — the draw is complete! 🎉');
+  $('spinBtn').disabled = spinning;
+  $('spinBtn').textContent = unlocked ? 'Spin' : '🔒 Spin';
+  $('status').textContent = !unlocked ? 'Tap Spin and enter the admin PIN to unlock.' :
+    (ready ? '' : (state.names.length === 0 ? 'Waiting for names…' : 'No prizes left — the draw is complete! 🎉'));
 }
 
 /* ---------------- admin actions ---------------- */
@@ -942,6 +943,18 @@ var lastCmdId = null;
 var pendingWin = null;   // {name, prize, mine}
 
 $('spinBtn').addEventListener('click', function(){
+  if (!unlocked){
+    var pin = window.prompt('Enter the admin PIN to unlock spinning:');
+    if (pin === null) return;
+    if (pin === ADMIN_PIN){
+      unlocked = true;
+      render();
+      toast('🔓 Spin unlocked for this session');
+    } else {
+      alert('Wrong PIN.');
+    }
+    return;
+  }
   if (spinning || !state.names.length || !state.prizes.length) return;
   var winnerName = state.names[Math.floor(Math.random()*state.names.length)];
   var prizeName = state.prizes[0].name;
