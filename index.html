@@ -200,7 +200,7 @@ footer{text-align:center;color:#9a9a94;font-size:.8rem;padding:16px;background:v
 </head>
 <body>
 
-<video class="page-bg-video" autoplay muted loop playsinline>
+<video class="page-bg-video" id="bgVideo" autoplay muted loop playsinline>
   <source src="1.mp4" type="video/mp4">
 </video>
 <div class="page-bg-scrim"></div>
@@ -403,6 +403,19 @@ function showError(msg){ var b=$('errBanner'); b.textContent='⚠ '+msg; b.style
 
 if (MILESTONE_TEXT) $('milestone').textContent = MILESTONE_TEXT;
 if (SITE_NAME){ $('siteName').textContent = SITE_NAME; $('siteName').style.display='block'; }
+
+(function(){
+  var v = $('bgVideo');
+  if (!v) return;
+  v.addEventListener('error', function(){
+    showError('Background video "1.mp4" did not load. Make sure the file is named exactly "1.mp4" and sits in the same folder as this page, then reload.');
+  });
+  // some browsers fire the error on the <source> instead of the <video>
+  var src = v.querySelector('source');
+  if (src) src.addEventListener('error', function(){
+    showError('Background video "1.mp4" did not load. Make sure the file is named exactly "1.mp4" and sits in the same folder as this page, then reload.');
+  });
+})();
 
 /* ---------------- data layer (Firestore, falls back to this browser) ---------------- */
 var EMPTY = { names:[], prizes:[], winners:[] };
