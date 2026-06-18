@@ -1007,7 +1007,7 @@ function runSpin(winnerName, prizeName, mine){
   delta = ((delta % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
   var turns = isFinal ? 12 : 9;
   var total = delta + turns*Math.PI*2;
-  var duration = isFinal ? 14000 : 10000;   // the grand finale spins even longer
+  var duration = isFinal ? 14000 : 5000;   // the grand finale spins even longer
   var start = performance.now();
   var startRot = rotation;
   var lastSeg = -1;
